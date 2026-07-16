@@ -1,0 +1,202 @@
+.dashboardPage {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100vh;
+  padding: 2.5rem 1rem;
+  background: linear-gradient(160deg, #fdf2f8 0%, #fce7f3 50%, #fbcfe8 100%);
+  overflow: hidden;
+}
+
+.dashboardBlob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(40px);
+  pointer-events: none;
+}
+
+.dashboardBlobOne {
+  top: -6rem;
+  left: -6rem;
+  width: 20rem;
+  height: 20rem;
+  background: radial-gradient(circle, #e0f2fe, transparent 72%);
+  opacity: 0.8;
+}
+
+.dashboardBlobTwo {
+  bottom: -7rem;
+  right: -6rem;
+  width: 20rem;
+  height: 20rem;
+  background: radial-gradient(circle, #f9d5e9, transparent 72%);
+  opacity: 0.7;
+}
+
+.dashboardTopBar {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 32rem;
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 1.5rem;
+}
+
+.logoutButton {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0.55rem 1rem;
+  border-radius: 0.8rem;
+  border: 1px solid #fbcfe8;
+  background: #ffffff;
+  color: #be185d;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 6px 16px -6px rgba(190, 24, 93, 0.2);
+}
+
+.dashboardAvatar {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+}
+
+.dashboardAvatarInner {
+  position: relative;
+  width: 5.5rem;
+  height: 5.5rem;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #38bdf8, #f472b6);
+  color: #fff;
+  font-size: 1.9rem;
+  font-weight: 800;
+  box-shadow: 0 18px 36px -10px rgba(190, 24, 93, 0.35);
+}
+
+.dashboardAvatarStatus {
+  position: absolute;
+  right: 0.15rem;
+  bottom: 0.15rem;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 9999px;
+  border: 2px solid #fdf2f8;
+  background: #34d399;
+}
+
+.dashboardHeader {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.dashboardHeaderTitle {
+  margin: 0;
+  font-size: 2.1rem;
+  font-weight: 800;
+  color: #075985;
+}
+
+.dashboardHeaderText {
+  margin-top: 0.6rem;
+  color: #9d174d;
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.dashboardAttendance {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 56rem;
+  background: #ffffff;
+  border-radius: 1rem;
+  border: 1px solid #fbcfe8;
+  padding: 1.5rem;
+  box-shadow: 0 18px 36px -18px rgba(190, 24, 93, 0.25);
+  overflow-x: auto;
+}
+
+.dashboardAttendance h2 {
+  margin: 0 0 1rem 0;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #075985;
+}
+
+.dashboardAttendance table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.dashboardAttendance thead th {
+  text-align: left;
+  padding: 0.65rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #be185d;
+  border-bottom: 2px solid #fbcfe8;
+  white-space: nowrap;
+}
+
+.dashboardAttendance tbody td {
+  padding: 0.65rem 0.75rem;
+  color: #374151;
+  border-bottom: 1px solid #fce7f3;
+  white-space: nowrap;
+}
+
+.dashboardAttendance tbody td .applyLeaveButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.4rem 0.9rem;
+  border-radius: 0.6rem;
+  border: none;
+  background: linear-gradient(135deg, #38bdf8, #f472b6);
+  color: #ffffff;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 6px 14px -6px rgba(190, 24, 93, 0.35);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+}
+
+.dashboardAttendance tbody td .applyLeaveButton:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 18px -6px rgba(190, 24, 93, 0.45);
+  opacity: 0.95;
+}
+
+.dashboardAttendance tbody td .applyLeaveButton:active {
+  transform: translateY(0);
+  box-shadow: 0 4px 10px -6px rgba(190, 24, 93, 0.4);
+}
+
+.dashboardAttendance tbody tr:hover {
+  background: #fdf2f8;
+}
+
+.dashboardAttendance tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.dashboardAttendance p {
+  color: #9d174d;
+  font-size: 0.9rem;
+  margin: 0;
+}

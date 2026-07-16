@@ -1,0 +1,455 @@
+.leavePage {
+  min-height: 100vh;
+  background: #eef0f3;
+  padding: 1.5rem 1rem;
+  font-family: 'Segoe UI', Arial, Helvetica, sans-serif;
+  color: #1f2937;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-sizing: border-box;
+}
+
+.leaveTopBar {
+  width: 100%;
+  max-width: 72rem;
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0.75rem;
+  flex-shrink: 0;
+}
+
+.backButton {
+  background: #dc2626;
+  border: none;
+  color: #ffffff;
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 0.55rem 1.4rem;
+  border-radius: 0.35rem;
+  box-shadow: 0 2px 6px rgba(220, 38, 38, 0.3);
+  transition: background 0.15s ease;
+}
+
+.backButton:hover {
+  background: #b91c1c;
+}
+
+.leaveCard {
+  width: 100%;
+  max-width: 72rem;
+  background: #ffffff;
+  border-radius: 0.6rem;
+  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.08);
+  border: 1px solid #e5e7eb;
+  overflow: hidden;
+}
+
+.leaveCardHeader {
+  padding: 1.25rem 2.5rem;
+  background: linear-gradient(135deg, #0c4a6e, #0369a1);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.leaveTitle {
+  margin: 0;
+  color: #ffffff;
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+
+.leaveBalance {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-size: 0.8rem;
+  background: rgba(255, 255, 255, 0.12);
+  padding: 0.45rem 0.9rem;
+  border-radius: 0.5rem;
+}
+
+.leaveBalanceLabel {
+  color: #e0f2fe;
+  font-weight: 700;
+}
+
+.leaveBalanceItem {
+  color: #f0fdf4;
+  font-weight: 700;
+  display: flex;
+  gap: 0.35rem;
+}
+
+.leaveBalanceDivider {
+  width: 1px;
+  height: 1rem;
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.leaveForm {
+  padding: 1.75rem 2.5rem 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  min-width: 0;
+  background: #f8fafc;
+}
+
+.leaveFormRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.leaveFormRowRight {
+  justify-content: flex-end;
+}
+
+.leaveAppDate {
+  font-size: 0.8rem;
+  color: #4b5563;
+}
+
+.leaveHighlight {
+  color: #dc2626;
+  font-weight: 700;
+}
+
+/* Section wrapper — now a distinct card with its own background/border/shadow */
+.leaveSection {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.55rem;
+  padding: 1.25rem 1.5rem 1.5rem;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+
+.leaveSectionLabel {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #ffffff;
+  margin: -1.25rem -1.5rem 0.25rem;
+  padding: 0.6rem 1.5rem;
+  background: #0f172a;
+  border-radius: 0.55rem 0.55rem 0 0;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  font-size: 0.78rem;
+}
+
+/* Personal details — fixed label width so all values align at the same start point */
+.leaveInlineInfoGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem 1.5rem;
+}
+
+.leaveInlineInfoItem {
+  display: grid;
+  grid-template-columns: 8rem 1fr;
+  align-items: baseline;
+  gap: 0.4rem;
+}
+
+.leaveInlineLabel {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #6b7280;
+  white-space: nowrap;
+}
+
+.leaveInlineValue {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.leaveInlineValueHighlight {
+  color: #059669;
+}
+
+/* Generic field: label above, input below */
+.leaveField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.leaveField label {
+  font-weight: 600;
+  font-size: 0.78rem;
+  color: #6b7280;
+  white-space: nowrap;
+}
+
+.leaveValue {
+  color: #059669;
+  font-weight: 700;
+}
+
+.leaveFieldGrow {
+  flex: 1;
+}
+
+/* Row 2: Leave Type + Reason */
+.leaveTypeReasonRow {
+  gap: 1.5rem;
+  align-items: flex-end;
+}
+
+.leaveFieldTiny {
+  flex: 0 0 auto;
+  width: 10rem;
+}
+
+.leaveFieldTiny select,
+.leaveFieldTiny input[type="date"] {
+  width: 100%;
+}
+
+.leaveReadOnly {
+  background: #f3f4f6;
+  color: #059669;
+  font-weight: 700;
+  cursor: not-allowed;
+}
+
+/* Row 1: Start Date | End Date | Total Days block */
+.leaveDateBlock {
+  display: flex;
+  align-items: stretch;
+  gap: 1.5rem;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.45rem;
+  padding: 0.85rem 1.5rem;
+}
+
+.leaveDateHalf {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.leaveDateHalfTotal {
+  flex: 0 0 auto;
+  width: 8rem;
+}
+
+.leaveDateHeading {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.leaveDateHalfInner {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.leaveDateHalfInner input[type="date"] {
+  width: 9.5rem;
+  flex-shrink: 0;
+}
+
+.leaveDateDivider {
+  width: 1px;
+  align-self: stretch;
+  background: #e5e7eb;
+}
+
+.leaveTimeInline {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex-wrap: nowrap;
+}
+
+.leaveTimeInline select {
+  width: auto;
+  min-width: 3rem;
+  padding: 0.35rem 0.3rem;
+  font-size: 0.78rem;
+}
+
+/* Reliever row */
+.leaveThreeCol {
+  display: grid;
+  grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.3fr) minmax(0, 1.3fr);
+  gap: 1.5rem;
+  align-items: start;
+  min-width: 0;
+  width: 100%;
+}
+
+/* Inputs */
+input[type="text"],
+input[type="date"],
+input[type="file"],
+select {
+  border: 1px solid #d1d5db;
+  border-radius: 0.35rem;
+  padding: 0.5rem 0.65rem;
+  font-size: 0.85rem;
+  background: #f9fafb;
+  color: #1f2937;
+  width: 100%;
+  box-sizing: border-box;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+input[type="text"]:focus,
+input[type="date"]:focus,
+select:focus {
+  outline: none;
+  border-color: #059669;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.12);
+}
+
+select {
+  cursor: pointer;
+}
+
+/* Attachment row */
+.leaveAttachmentRow {
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  border-radius: 0.4rem;
+  padding: 0.75rem 1.1rem;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.4rem;
+}
+
+.leaveAttachmentRow .leaveField {
+  width: 100%;
+  max-width: 18rem;
+}
+
+
+
+.leaveFieldError {
+  font-size: 0.72rem;
+  color: #dc2626;
+  font-weight: 600;
+  margin-top: 0.15rem;
+}
+
+.leaveAttachmentNote {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #dc2626;
+  font-weight: 700;
+}
+
+input[type="file"] {
+  background: #ffffff;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.78rem;
+}
+
+input[type="file"]::file-selector-button {
+  padding: 0.3rem 0.7rem;
+  font-size: 0.75rem;
+  border-radius: 0.3rem;
+  border: 1px solid #d1d5db;
+  background: #f3f4f6;
+  cursor: pointer;
+  margin-right: 0.6rem;
+}
+
+/* Bottom action bar with Submit */
+.leaveFormSubmitRow {
+  justify-content: flex-end;
+  margin-top: 0.25rem;
+}
+
+.leaveSubmitButton {
+  background: #dc2626;
+  color: #fff;
+  border: none;
+  border-radius: 0.35rem;
+  padding: 0.7rem 2.4rem;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.35);
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.leaveSubmitButton:hover {
+  background: #b91c1c;
+  transform: translateY(-1px);
+}
+
+.leaveSubmitButton:active {
+  transform: translateY(0);
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .leaveThreeCol {
+    grid-template-columns: 1fr;
+  }
+
+  .leaveDateBlock {
+    flex-direction: column;
+  }
+
+  .leaveDateDivider {
+    width: 100%;
+    height: 1px;
+  }
+
+  .leaveDateHalfTotal {
+    width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .leaveCardHeader {
+    padding: 1rem 1.25rem;
+  }
+
+  .leaveForm {
+    padding: 1.25rem 1.25rem 1.5rem;
+  }
+
+  .leaveInlineInfoGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .leaveInlineInfoItem {
+    grid-template-columns: 8rem 1fr;
+  }
+
+  .leaveTypeReasonRow {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .leaveFieldTiny {
+    width: 100%;
+  }
+
+  .leaveSectionLabel {
+    margin: -1rem -1.25rem 0.25rem;
+    padding: 0.55rem 1.25rem;
+  }
+}

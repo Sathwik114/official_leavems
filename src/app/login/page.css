@@ -1,0 +1,208 @@
+.loginPage {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 2.5rem 1rem;
+  background: linear-gradient(160deg, #fdf2f8 0%, #fce7f3 50%, #fbcfe8 100%);
+  overflow: hidden;
+}
+
+.loginBlob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(40px);
+  pointer-events: none;
+}
+
+.loginBlobOne {
+  top: -6rem;
+  left: -6rem;
+  width: 20rem;
+  height: 20rem;
+  background: radial-gradient(circle, #e0f2fe, transparent 72%);
+  opacity: 0.8;
+}
+
+.loginBlobTwo {
+  bottom: -7rem;
+  right: -6rem;
+  width: 20rem;
+  height: 20rem;
+  background: radial-gradient(circle, #f9d5e9, transparent 72%);
+  opacity: 0.7;
+}
+
+.pageHeader {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.pageHeader .eyebrow {
+  margin: 0 0 0.4rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #be185d;
+}
+
+.pageHeader .brandName {
+  margin: 0 0 0.4rem;
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: #075985;
+}
+
+.pageHeader .systemName {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #9d174d;
+}
+
+.loginContainer {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 24rem;
+}
+
+.loginShadowLayer {
+  position: absolute;
+  inset: 0;
+  border-radius: 1.6rem;
+  background: linear-gradient(135deg, #bae6fd, #fbcfe8);
+  opacity: 0.5;
+  transform: translate(6px, 8px);
+  filter: blur(2px);
+}
+
+.loginCard {
+  position: relative;
+  border-radius: 1.5rem;
+  background: #ffffff;
+  box-shadow:
+    0 4px 10px rgba(190, 24, 93, 0.06),
+    0 20px 40px -14px rgba(190, 24, 93, 0.16),
+    0 35px 65px -25px rgba(3, 105, 161, 0.1);
+  padding: 0.7rem;
+  border: 1px solid #fce7f3;
+}
+
+.loginInnerPanel {
+  border-radius: 1.1rem;
+  background: linear-gradient(160deg, #f0f9ff, #fdf2f8);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 10px 24px -10px rgba(56, 189, 248, 0.25),
+    0 8px 18px -8px rgba(244, 114, 182, 0.25);
+  border: 1px solid #e0f2fe;
+  padding: 1.35rem 1.3rem;
+}
+
+.accentBar {
+  height: 4px;
+  width: 52px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #7dd3fc, #f472b6);
+  margin: 0 auto 1.1rem;
+}
+
+.loginAlert {
+  display: flex;
+  gap: 0.65rem;
+  padding: 0.8rem;
+  margin-bottom: 1rem;
+  border-radius: 0.8rem;
+  font-size: 0.85rem;
+}
+
+.loginAlertSuccess {
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  background: rgba(224, 242, 254, 0.6);
+  color: #075985;
+}
+
+.loginAlertError {
+  border: 1px solid rgba(244, 114, 182, 0.35);
+  background: rgba(252, 231, 243, 0.7);
+  color: #9d174d;
+}
+
+.loginForm {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.loginField label {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #94a3b8;
+}
+
+.loginField input {
+  width: 100%;
+  padding: 0.75rem 0.95rem;
+  border-radius: 0.85rem;
+  border: 1.5px solid #e0f2fe;
+  background: #ffffff;
+  color: #334155;
+  outline: none;
+  box-sizing: border-box;
+  font-size: 13.5px;
+  box-shadow: 0 2px 6px rgba(148, 163, 184, 0.12);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.loginField input::placeholder {
+  color: #94a3b8;
+}
+
+.loginField input:focus {
+  border-color: #7dd3fc;
+  box-shadow: 0 0 0 3px rgba(125, 211, 252, 0.25);
+}
+
+.passwordField input {
+  border-color: #fce7f3;
+}
+
+.passwordField input:focus {
+  border-color: #f472b6;
+  box-shadow: 0 0 0 3px rgba(244, 114, 182, 0.2);
+}
+
+.loginButton {
+  width: 100%;
+  padding: 0.8rem 1rem;
+  border: none;
+  border-radius: 0.85rem;
+  font-weight: 700;
+  font-size: 14px;
+  color: #fff;
+  background: linear-gradient(90deg, #0284c7, #be185d);
+  cursor: pointer;
+  box-shadow: 0 12px 24px -10px rgba(190, 24, 93, 0.45);
+  margin-top: 0.15rem;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.loginButton:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 16px 28px -10px rgba(190, 24, 93, 0.55);
+}
+
+.loginButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}

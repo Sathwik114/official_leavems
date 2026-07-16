@@ -1,0 +1,88 @@
+LDAP Configuration in Next.js Project
+===================================
+
+1. Install LDAP package
+npm install ldapjs
+
+2. Add environment variables in .env
+LDAP_URL=ldap://your-ldap-server:389
+LDAP_BASE_DN=ou=GTI,DC=gti,DC=com
+LDAP_DOMAIN=gti.com
+JWT_SECRET=your-secret-key
+
+3. Create login API route
+File: src/app/api/auth/login/route.js
+
+Example:
+import { NextResponse } from 'next/server';
+import * as jose from 'jose';
+import ldap from 'ldapjs';
+
+function ldapAuthenticate(username, password) {
+  return new Promise((resolve, reject) => {
+    const client = ldap.createClient({
+      url: process.env.LDAP_URL,
+      connectTimeout: 10000,
+      timeout: 5000,
+    });
+
+    const bindDn = `CN=${username},${process.env.LDAP_BASE_DN}`;
+
+    client.bind(bindDn, password, (err) => {
+      if (err) {
+        client.unbind();
+        return reject(new Error('Invalid username or password'));
+      }
+
+      client.unbind();
+      resolve(bindDn);
+    });
+  });
+}
+
+export async function POST(request) {
+  try {
+    const { username, password } = await request.json();
+    const userDN = await ldapAuthenticate(username, password);
+
+    const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+    const token = await new jose.SignJWT({
+      username,
+      id: userDN,
+    })
+      .setProtectedHeader({ alg: 'HS256' })
+      .setIssuedAt()
+      .setExpirationTime('2h')
+      .sign(secret);
+
+    const response = NextResponse.json({ message: 'Logged in successfully', username });
+    response.cookies.set({
+      name: 'auth_token',
+      value: token,
+      httpOnly: true,
+      path: '/',
+      sameSite: 'lax',
+      secure: false,
+    });
+
+    return response;
+  } catch (error) {
+    return NextResponse.json({ error: 'Invalid username or password' }, { status: 401 });
+  }
+}
+
+4. Create login form
+Use a form that sends username and password to /api/auth/login.
+
+5. Protect pages
+Verify the auth cookie on protected routes before showing the page.
+
+6. Test
+- Start the app: npm run dev
+- Open the login page
+- Enter a valid LDAP username and password
+
+Important notes
+- LDAP server URL must be reachable from the server where Next.js runs.
+- The username format may need to be adjusted depending on your LDAP server.
+- For Active Directory, you may need CN, uid, or sAMAccountName format.
