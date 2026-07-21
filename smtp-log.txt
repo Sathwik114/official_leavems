@@ -1,0 +1,32 @@
+=== SMTP TEST START === 2026-07-20T08:57:00.726Z
+Transport created
+verify error Error: connect ECONNREFUSED 111.160.156.75:587
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1706:16)
+send error Error: connect ECONNREFUSED 111.160.156.75:587
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1706:16)
+=== SMTP TEST END === 2026-07-20T08:57:30.889Z
+=== SMTP TEST START === 2026-07-20T09:00:43.546Z
+Transport created
+verify error Error: Invalid login: 535 Error: authentication failed
+    at SMTPConnection._formatError (C:\Users\260296\Desktop\officiallms\node_modules\nodemailer\lib\smtp-connection\index.js:809:19)
+    at SMTPConnection._actionAUTHComplete (C:\Users\260296\Desktop\officiallms\node_modules\nodemailer\lib\smtp-connection\index.js:1588:34)
+    at SMTPConnection.<anonymous> (C:\Users\260296\Desktop\officiallms\node_modules\nodemailer\lib\smtp-connection\index.js:556:26)
+    at SMTPConnection._processResponse (C:\Users\260296\Desktop\officiallms\node_modules\nodemailer\lib\smtp-connection\index.js:993:20)
+    at SMTPConnection._onData (C:\Users\260296\Desktop\officiallms\node_modules\nodemailer\lib\smtp-connection\index.js:774:14)
+    at SMTPConnection._onSocketData (C:\Users\260296\Desktop\officiallms\node_modules\nodemailer\lib\smtp-connection\index.js:195:44)
+    at TLSSocket.emit (node:events:509:28)
+    at addChunk (node:internal/streams/readable:563:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:514:3)
+    at Readable.push (node:internal/streams/readable:394:5)
+send error Error: Invalid login: 535 Error: authentication failed
+    at SMTPConnection._formatError (C:\Users\260296\Desktop\officiallms\node_modules\nodemailer\lib\smtp-connection\index.js:809:19)
+    at SMTPConnection._actionAUTHComplete (C:\Users\260296\Desktop\officiallms\node_modules\nodemailer\lib\smtp-connection\index.js:1588:34)
+    at SMTPConnection.<anonymous> (C:\Users\260296\Desktop\officiallms\node_modules\nodemailer\lib\smtp-connection\index.js:556:26)
+    at SMTPConnection._processResponse (C:\Users\260296\Desktop\officiallms\node_modules\nodemailer\lib\smtp-connection\index.js:993:20)
+    at SMTPConnection._onData (C:\Users\260296\Desktop\officiallms\node_modules\nodemailer\lib\smtp-connection\index.js:774:14)
+    at SMTPConnection._onSocketData (C:\Users\260296\Desktop\officiallms\node_modules\nodemailer\lib\smtp-connection\index.js:195:44)
+    at TLSSocket.emit (node:events:509:28)
+    at addChunk (node:internal/streams/readable:563:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:514:3)
+    at Readable.push (node:internal/streams/readable:394:5)
+=== SMTP TEST END === 2026-07-20T09:00:46.290Z

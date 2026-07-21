@@ -2,11 +2,19 @@ import './page.css';
 import { cookies } from 'next/headers';
 import * as jose from 'jose';
 import Link from 'next/link';
-import LogoutButton from './LogoutButton';
 import { getAttendance } from '@/lib/attendanceDb';
-
+import { ensureLeaveTables } from '@/lib/leaveDb';
+import { getEmployeeDetails } from '@/lib/payrollDb';
+import { isCccOrHrUser } from '@/lib/leaveApprovalConfig';
 
 export default async function Dashboard() {
+  // Initialize leave database tables on dashboard load
+  try {
+    await ensureLeaveTables();
+  } catch (err) {
+    // Silently fail if table initialization errors
+  }
+
   const cookieStore = await cookies();
   const token = cookieStore.get('auth_token')?.value;
 
@@ -17,6 +25,8 @@ export default async function Dashboard() {
   };
 
   let attendance = [];
+  let attendanceWithEmployeeNames = [];
+  let currentEmployee = null;
 
   // Decode JWT
   if (token) {
@@ -39,6 +49,18 @@ export default async function Dashboard() {
   if (user.username && user.username !== 'Member') {
     try {
       attendance = await getAttendance(Number(user.username));
+      currentEmployee = await getEmployeeDetails(String(user.username));
+      attendanceWithEmployeeNames = await Promise.all(
+        attendance.map(async (row) => {
+          const employee = row.Empcode ? await getEmployeeDetails(String(row.Empcode)) : null;
+          return {
+            ...row,
+            EmployeeCode: row.Empcode || '-',
+            EmployeeName: employee?.EmpName || row.Empcode || '-',
+            Department: employee?.DeptCode || '-',
+          };
+        })
+      );
     } catch (err) {
       console.error('Attendance Error:', err);
     }
@@ -49,17 +71,13 @@ export default async function Dashboard() {
       <div className="dashboardBlob dashboardBlobOne" />
       <div className="dashboardBlob dashboardBlobTwo" />
 
-      <div className="dashboardTopBar">
-        <LogoutButton />
-      </div>
-
       <div className="dashboardAvatar">
         
       </div>
 
       <div className="dashboardHeader">
         <h1 className="dashboardHeaderTitle">
-          Hello, {user.username}
+          Hello, {currentEmployee?.EmpName || user.name || user.username}
         </h1>
 
         <p className="dashboardHeaderText">
@@ -73,51 +91,66 @@ export default async function Dashboard() {
         {attendance.length === 0 ? (
           <p>No attendance records found.</p>
         ) : (
-          <table className="attendanceTable">
-            <thead>
-              <tr>
-                <th>Emp Code</th>
-                <th>Designation</th>
-                <th>Date</th>
-                <th>Attendance</th>
-                <th>In Time</th>
-                <th>Out Time</th>
-                <th>Apply For a Leave</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {attendance.map((row, index) => (
-                <tr key={index}>
-                  <td>{row.Empcode}</td>
-                  <td>{row.DesigCode}</td>
-
-                  <td>
-                    {row.AttDate
-                      ? new Date(row.AttDate).toLocaleDateString()
-                      : '-'}
-                  </td>
-
-                  <td>{row.AttType || '-'}</td>
-
-                  <td>
-                    {row.InTime instanceof Date
-                      ? row.InTime.toLocaleTimeString("en-GB", { hour12: false })
-                      : row.InTime || "-"}
-                  </td>
-
-                  <td>
-                    {row.OutTime instanceof Date
-                      ? row.OutTime.toLocaleTimeString("en-GB", { hour12: false })
-                      : row.OutTime || "-"}
-                  </td>
-                  <td> <Link href={`/apply-leave?empcode=${row.Empcode}`}> <button type="button" className="applyLeaveButton"> Apply Now </button> </Link></td>
+          <div className="dashboardAttendanceTableWrap">
+            <table className="attendanceTable">
+              <thead>
+                <tr>
+                  <th>Employee ID</th>
+                  <th>Employee Name</th>
+                  <th>Department</th>
+                  <th>Date</th>
+                  <th>Attendance</th>
+                  <th>In Time</th>
+                  <th>Out Time</th>
+                  <th>Apply For a Leave</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+
+              <tbody>
+                {attendanceWithEmployeeNames.map((row, index) => (
+                  <tr key={`${row.Empcode || 'emp'}-${row.AttDate ? new Date(row.AttDate).toISOString() : index}`}>
+                    <td>{row.EmployeeCode}</td>
+                    <td>{row.EmployeeName}</td>
+                    <td>{row.Department}</td>
+
+                    <td>
+                      {row.AttDate
+                        ? new Date(row.AttDate).toLocaleDateString()
+                        : '-'}
+                    </td>
+
+                    <td>{row.AttType || '-'}</td>
+
+                    <td>
+                      {row.InTime instanceof Date
+                        ? row.InTime.toLocaleTimeString("en-GB", { hour12: false })
+                        : row.InTime || "-"}
+                    </td>
+
+                    <td>
+                      {row.OutTime instanceof Date
+                        ? row.OutTime.toLocaleTimeString("en-GB", { hour12: false })
+                        : row.OutTime || "-"}
+                    </td>
+                    <td>
+                      {!isCccOrHrUser(user.username) ? (
+                        <Link href={`/apply-leave?empcode=${row.Empcode}`}>
+                          <button type="button" className="applyLeaveButton">Apply Now</button>
+                        </Link>
+                      ) : (
+                        <button type="button" className="applyLeaveButton" disabled>
+                          Not Eligible
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
+
     </div>
   );
 }

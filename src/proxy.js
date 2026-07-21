@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import * as jose from 'jose';
+import { getDashboardRedirectForUser } from '@/lib/leaveApprovalConfig';
 
 export async function proxy(request) {
   const token = request.cookies.get('auth_token')?.value;
@@ -33,9 +34,10 @@ export async function proxy(request) {
     if (token) {
       try {
         const secret = new TextEncoder().encode(process.env.JWT_SECRET);
-        await jose.jwtVerify(token, secret);
-        // Already authenticated, redirect to dashboard
-        const url = new URL('/dashboard', request.url);
+        const { payload } = await jose.jwtVerify(token, secret);
+        const userId = String(payload.username || payload.name || '').trim();
+        const redirectPath = getDashboardRedirectForUser(userId);
+        const url = new URL(redirectPath, request.url);
         return NextResponse.redirect(url);
       } catch (error) {
         // Invalid token on login/signup page, clear it and let them stay

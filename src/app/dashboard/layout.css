@@ -1,0 +1,102 @@
+.dashboardNavbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0.7rem 2rem;
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  box-sizing: border-box;
+}
+
+.dashboardNavBrand {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-shrink: 0;
+}
+
+.dashboardNavBrandMark {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #0c4a6e;
+  letter-spacing: 0.01em;
+}
+
+.dashboardNavBrandText {
+  font-size: 1.02rem;
+  font-weight: 650;
+  color: #1e293b;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+.dashboardNavRight {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.dashboardNavLinks {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+}
+
+.dashboardNavLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.7rem;
+  border-radius: 0.45rem;
+  font-size: 13px;
+  font-weight: 500;
+  color: #475569;
+  background: transparent;
+  border: 1px solid transparent;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.dashboardNavLink:hover {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+  color: #1e293b;
+}
+
+.dashboardNavLink.active {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #2563eb;
+  font-weight: 600;
+}
+
+.navIcon {
+  font-size: 12.5px;
+  line-height: 1;
+}
+
+.dashboardNavDivider {
+  width: 1px;
+  height: 22px;
+  background: #e2e8f0;
+}
+
+@media (max-width: 900px) {
+  .dashboardNavbar {
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    padding: 0.7rem 1.25rem;
+  }
+  .dashboardNavRight {
+    flex-wrap: wrap;
+    width: 100%;
+    justify-content: flex-end;
+  }
+  .dashboardNavDivider {
+    display: none;
+  }
+}

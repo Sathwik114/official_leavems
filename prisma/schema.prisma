@@ -13,7 +13,38 @@ model User {
   name      String?
   email     String?  @unique
   active    Boolean  @default(true)
-  authMode  String   @default("GTI") // matches your LDAPConfiguration.ConnectionName
+  authMode  String   @default("GTI")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model LeaveRequest {
+  id             Int              @id @default(autoincrement())
+  applicantId    String
+  applicantName  String?
+  leaveType      String
+  startDate      DateTime
+  endDate        DateTime
+  totalDays      Int
+  reason         String
+  relieverId     String?
+  relieverName   String?
+  contactNumber  String?
+  approvalFlow   String
+  currentApprover String
+  status         String           @default("PENDING")
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  approvals      LeaveApproval[]
+}
+
+model LeaveApproval {
+  id             Int          @id @default(autoincrement())
+  leaveRequestId Int
+  leaveRequest   LeaveRequest @relation(fields: [leaveRequestId], references: [id])
+  approverId     String
+  decision       String?
+  remarks        String?
+  stepNumber     Int
+  createdAt      DateTime     @default(now())
 }

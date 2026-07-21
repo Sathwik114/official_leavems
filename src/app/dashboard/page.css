@@ -34,6 +34,42 @@
   opacity: 0.7;
 }
 
+.dashboardShell {
+  min-height: 100vh;
+  background: linear-gradient(160deg, #fdf2f8 0%, #fce7f3 50%, #fbcfe8 100%);
+}
+
+.dashboardNavbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1rem;
+  background: rgba(255,255,255,0.9);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid #fbcfe8;
+}
+
+.dashboardNavLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.dashboardNavLink {
+  text-decoration: none;
+  padding: 0.55rem 0.9rem;
+  border-radius: 999px;
+  background: #fff;
+  color: #be185d;
+  font-weight: 700;
+  border: 1px solid #fbcfe8;
+}
+
 .dashboardTopBar {
   position: relative;
   z-index: 1;
@@ -118,13 +154,37 @@
   position: relative;
   z-index: 1;
   width: 100%;
-  max-width: 56rem;
+  max-width: 72rem;          /* widened from 56rem so more columns fit naturally */
   background: #ffffff;
   border-radius: 1rem;
   border: 1px solid #fbcfe8;
   padding: 1.5rem;
   box-shadow: 0 18px 36px -18px rgba(190, 24, 93, 0.25);
-  overflow-x: auto;
+  box-sizing: border-box;
+}
+
+.dashboardAttendanceTableWrap {
+  margin-top: 0.5rem;
+  overflow-x: hidden;        /* was: auto — no horizontal scrollbar */
+  overflow-y: auto;
+  max-height: 28rem;
+  border: 1px solid #fce7f3;
+  border-radius: 0.8rem;
+}
+
+
+.dashboardAttendanceTableWrap::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.dashboardAttendanceTableWrap::-webkit-scrollbar-track {
+  background: #fdf2f8;
+}
+
+.dashboardAttendanceTableWrap::-webkit-scrollbar-thumb {
+  background: #f472b6;
+  border-radius: 999px;
 }
 
 .dashboardAttendance h2 {
@@ -136,6 +196,7 @@
 
 .dashboardAttendance table {
   width: 100%;
+  table-layout: fixed;       /* forces columns to share available width instead of overflowing */
   border-collapse: collapse;
   font-size: 0.9rem;
 }
@@ -149,14 +210,17 @@
   letter-spacing: 0.03em;
   color: #be185d;
   border-bottom: 2px solid #fbcfe8;
-  white-space: nowrap;
+  white-space: normal;       /* was: nowrap — let headers wrap instead of forcing width */
+  word-break: break-word;
 }
 
 .dashboardAttendance tbody td {
   padding: 0.65rem 0.75rem;
   color: #374151;
   border-bottom: 1px solid #fce7f3;
-  white-space: nowrap;
+  white-space: normal;       /* was: nowrap — let long values wrap to a second line */
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .dashboardAttendance tbody td .applyLeaveButton {
@@ -200,3 +264,5 @@
   font-size: 0.9rem;
   margin: 0;
 }
+
+

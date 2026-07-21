@@ -1,0 +1,319 @@
+html, body {
+  overflow: hidden;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.dashboardPage {
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  padding: 1.5rem 1rem;
+  background: linear-gradient(160deg, #fdf2f8 0%, #fce7f3 50%, #fbcfe8 100%);
+  box-sizing: border-box;
+  position: relative;
+}
+
+.dashboardBlob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(40px);
+  pointer-events: none;
+}
+
+.dashboardBlobOne {
+  top: -6rem;
+  left: -6rem;
+  width: 20rem;
+  height: 20rem;
+  background: radial-gradient(circle, #e0f2fe, transparent 72%);
+  opacity: 0.8;
+}
+
+.dashboardBlobTwo {
+  bottom: -7rem;
+  right: -6rem;
+  width: 20rem;
+  height: 20rem;
+  background: radial-gradient(circle, #f9d5e9, transparent 72%);
+  opacity: 0.7;
+}
+
+.dashboardHeader {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  margin-bottom: 1.25rem;
+}
+
+.dashboardHeaderTitle {
+  margin: 0;
+  font-size: 1.9rem;
+  font-weight: 800;
+  color: #075985;
+}
+
+.dashboardHeaderText {
+  margin-top: 0.5rem;
+  color: #9d174d;
+  font-size: 0.92rem;
+  font-weight: 500;
+}
+
+.dashboardAttendance {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 100%;
+  flex: 1;
+  min-height: 0;           /* NEW — allows child to size correctly inside flex column */
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: 0 5px;
+  box-sizing: border-box;
+}
+
+.hodFilterBar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.hodFilterField {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.hodFilterField label {
+  font-weight: 700;
+  font-size: 13px;
+  color: #075985;
+}
+
+.hodFilterField select {
+  padding: 0.45rem 0.7rem;
+  border-radius: 0.6rem;
+  border: 1.5px solid #fbcfe8;
+  background: #ffffff;
+  font-size: 13px;
+  color: #334155;
+  cursor: pointer;
+  outline: none;
+}
+
+.hodFilterField select:focus {
+  border-color: #7dd3fc;
+  box-shadow: 0 0 0 3px rgba(125, 211, 252, 0.25);
+}
+
+.backToListButton {
+  padding: 0.5rem 1rem;
+  border-radius: 0.7rem;
+  border: 1px solid #fbcfe8;
+  background: #ffffff;
+  color: #be185d;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.backToListButton:hover {
+  background: #fdf2f8;
+  transform: translateY(-1px);
+}
+
+.hodSelectedInfo {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 1rem;
+  font-size: 13.5px;
+  color: #334155;
+}
+
+.hodSelectedInfo strong {
+  color: #075985;
+  font-weight: 700;
+  margin-right: 0.3rem;
+}
+
+.hodHighlightValue {
+  display: inline-block;
+  padding: 0.2rem 0.65rem;
+  border-radius: 0.5rem;
+  background: linear-gradient(135deg, #fde68a, #fca5a5);
+  color: #7c2d12;
+  font-weight: 800;
+  font-size: 13px;
+  box-shadow: 0 4px 10px -4px rgba(124, 45, 18, 0.35);
+}
+
+.hodTableWrapper {
+  width: 100%;
+  background: #ffffff;
+  border: 1px solid #fbcfe8;
+  border-radius: 0.9rem;
+  overflow: hidden;
+  box-shadow: 0 14px 30px -16px rgba(190, 24, 93, 0.2);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;           /* NEW */
+  max-height: 100%;
+}
+
+.attendanceTable {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: 13px;
+  background: #ffffff;
+}
+
+.attendanceTable th,
+.attendanceTable td {
+  padding: 0.42rem 0.6rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+  border-bottom: 1px solid #fce7f3;
+}
+
+.attendanceTable thead th {
+  background: #fdf2f8;
+  color: #be185d;
+  font-weight: 700;
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  border-bottom: 2px solid #fbcfe8;
+}
+
+.attendanceTable tbody tr:nth-child(even) {
+  background: #ffffff;
+}
+
+.attendanceTable tbody tr:hover {
+  background: #f9fafb;
+}
+
+.attendanceTable tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Generic scrollable wrapper with sticky header, used by both tables.
+   Row heights are pinned via explicit height rules below so this
+   max-height reliably shows exactly ~10 body rows before scrolling. */
+.scrollableTableWrapper {
+  overflow-y: auto;
+  position: relative;
+  min-height: 0;           /* NEW */
+}
+
+.scrollableTableWrapper .attendanceTable thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+/* HOD list table: fixed row heights so "10 rows then scroll" is exact */
+.hodListTable thead tr {
+  height: 34px;
+}
+
+.hodListTable tbody tr {
+  height: 40px;
+}
+
+.hodListTable th,
+.hodListTable td {
+  padding: 0.3rem 0.55rem;
+  font-size: 12.5px;
+}
+
+/* header(34) + 10 body rows(40) = 434px */
+.hodListWrapper {
+  max-height: none;
+  overflow-x: visible;
+}
+
+.hodListTable th:nth-child(1),
+.hodListTable td:nth-child(1) { width: 12%; } /* Employee ID */
+.hodListTable th:nth-child(2),
+.hodListTable td:nth-child(2) { width: 34%; } /* Employee Name */
+.hodListTable th:nth-child(3),
+.hodListTable td:nth-child(3) { width: 14%; } /* Department */
+.hodListTable th:nth-child(4),
+.hodListTable td:nth-child(4) { width: 14%; } /* Section */
+.hodListTable th:nth-child(5),
+.hodListTable td:nth-child(5) { width: 26%; } /* Action */
+
+/* Detail attendance table: fixed row heights, same "10 rows then scroll" rule */
+.attendanceDetailTable thead tr {
+  height: 32px;
+}
+
+.attendanceDetailTable tbody tr {
+  height: 38px;
+}
+
+.attendanceDetailTable th,
+.attendanceDetailTable td {
+  padding: 0.28rem 0.5rem;
+  font-size: 12.5px;
+}
+
+/* header(32) + 10 body rows(38) = 412px */
+.attendanceDetailWrapper {
+  max-height: 412px;
+}
+
+.attendanceDetailTable th:nth-child(1),
+.attendanceDetailTable td:nth-child(1) { width: 15%; } /* Date */
+.attendanceDetailTable th:nth-child(2),
+.attendanceDetailTable td:nth-child(2) { width: 9%;  } /* Day */
+.attendanceDetailTable th:nth-child(3),
+.attendanceDetailTable td:nth-child(3) { width: 14%; } /* Status */
+.attendanceDetailTable th:nth-child(4),
+.attendanceDetailTable td:nth-child(4) { width: 17%; } /* Check-In */
+.attendanceDetailTable th:nth-child(5),
+.attendanceDetailTable td:nth-child(5) { width: 17%; } /* Check-Out */
+.attendanceDetailTable th:nth-child(6),
+.attendanceDetailTable td:nth-child(6) { width: 28%; } /* Work Hours */
+
+.viewAttendanceButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.8rem;
+  border-radius: 0.6rem;
+  border: none;
+  background: linear-gradient(135deg, #38bdf8, #f472b6);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 6px 14px -6px rgba(190, 24, 93, 0.4);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+}
+
+.viewAttendanceButton:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 18px -6px rgba(190, 24, 93, 0.5);
+  opacity: 0.95;
+}
+
+.viewAttendanceButton:active {
+  transform: translateY(0);
+}

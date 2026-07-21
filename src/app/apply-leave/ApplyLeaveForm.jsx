@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import './page.css';
 
-export default function ApplyLeaveForm({ employee }) {
+export default function ApplyLeaveForm({ employee, currentUserUsername, approvalFlow }) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const empcode = searchParams.get('empcode') || '';
@@ -24,7 +24,11 @@ export default function ApplyLeaveForm({ employee }) {
   const [relieverName, setRelieverName] = useState('');
   const [contactNumber, setContactNumber] = useState('');
   const [attachment, setAttachment] = useState(null);
-  const [relieverLookupStatus, setRelieverLookupStatus] = useState(''); // '', 'loading', 'error'
+  const [relieverLookupStatus, setRelieverLookupStatus] = useState('');
+  const [submitMessage, setSubmitMessage] = useState('');
+  const [submitError, setSubmitError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [approvalFlowDisplay, setApprovalFlowDisplay] = useState([]);
 
   const today = new Date().toLocaleDateString('en-GB');
 
@@ -44,6 +48,35 @@ export default function ApplyLeaveForm({ employee }) {
       setTotalDays('');
     }
   }, [startDate, endDate]);
+
+  useEffect(() => {
+    async function resolveFlowNames() {
+      if (!approvalFlow?.flow?.length) {
+        setApprovalFlowDisplay([]);
+        return;
+      }
+
+      const resolved = await Promise.all(
+        approvalFlow.flow.map(async (approverId) => {
+          const trimmedId = String(approverId || '').trim();
+          if (!trimmedId) return '';
+
+          try {
+            const res = await fetch(`/api/employee?empcode=${encodeURIComponent(trimmedId)}`);
+            const data = await res.json();
+            return data.employee?.EmpName || trimmedId;
+          } catch (err) {
+            console.error('Approval flow lookup failed:', err);
+            return trimmedId;
+          }
+        })
+      );
+
+      setApprovalFlowDisplay(resolved.filter(Boolean));
+    }
+
+    resolveFlowNames();
+  }, [approvalFlow]);
 
   async function handleRelieverIdBlur() {
     const trimmedId = relieverId.trim();
@@ -72,22 +105,60 @@ export default function ApplyLeaveForm({ employee }) {
     }
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
-    console.log({
-      empcode,
-      leaveType,
-      startDate,
-      startTime: `${startHour}:${startMin} ${startPeriod}`,
-      endDate,
-      endTime: `${endHour}:${endMin} ${endPeriod}`,
-      totalDays,
-      reason,
-      relieverId,
-      relieverName,
-      contactNumber,
-      attachment,
-    });
+    setSubmitMessage('');
+    setSubmitError('');
+
+    const applicantId = employee?.EmpCode || empcode;
+
+    if (!applicantId || !startDate || !endDate || !reason.trim()) {
+      setSubmitError('Please complete the required leave fields before submitting.');
+      return;
+    }
+
+    if (!approvalFlow) {
+      setSubmitError('This employee is not configured for the leave approval workflow.');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const res = await fetch('/api/leave', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          applicantId,
+          applicantName: employee?.EmpName || '',
+          leaveType,
+          startDate,
+          endDate,
+          totalDays: totalDaysNum,
+          reason,
+          relieverId,
+          relieverName,
+          contactNumber,
+          attachmentName: attachment?.name || null,
+          attachmentType: attachment?.type || null,
+          currentUserUsername,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Unable to submit leave application.');
+      }
+
+      setSubmitMessage(`Leave application submitted successfully. First approval is pending with ${data.currentApproverName || data.currentApprover || 'the configured approver'}.`);
+      setTimeout(() => router.push('/dashboard'), 1200);
+    } catch (err) {
+      console.error('Leave submission failed:', err);
+      setSubmitError(err.message || 'Leave submission failed.');
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -112,6 +183,28 @@ export default function ApplyLeaveForm({ employee }) {
             </span>
           </div>
         </div>
+
+        {submitMessage && (
+          <div className="loginAlert loginAlertSuccess">
+            <span>{submitMessage}</span>
+          </div>
+        )}
+        {submitError && (
+          <div className="loginAlert loginAlertError">
+            <span>{submitError}</span>
+          </div>
+        )}
+
+        {approvalFlow && (
+          <div className="leaveSection">
+            <h2 className="leaveSectionLabel">Approval Flow</h2>
+            <p className="leaveInlineValue">
+              {approvalFlowDisplay.length > 0
+                ? approvalFlowDisplay.join(' → ')
+                : approvalFlow.flow.join(' → ')}
+            </p>
+          </div>
+        )}
 
         <form className="leaveForm" onSubmit={handleSubmit}>
           <div className="leaveFormRow leaveFormRowRight">
@@ -218,8 +311,8 @@ export default function ApplyLeaveForm({ employee }) {
                   <option value="Earned Leave">Earned Leave</option>
                   <option value="Sick Leave">Sick Leave</option>
                   <option value="LWP">LWP</option>
-                  <option value="ESI">ESI</option>
-                  <option value="ML">ML</option>
+                  <option value="COFF">COFF</option>
+                  <option value="1Hour">1 Hour</option>
                 </select>
               </div>
 
@@ -289,8 +382,8 @@ export default function ApplyLeaveForm({ employee }) {
           </div>
 
           <div className="leaveFormRow leaveFormSubmitRow">
-            <button type="submit" className="leaveSubmitButton">
-              Submit Application
+            <button type="submit" className="leaveSubmitButton" disabled={isSubmitting || !approvalFlow}>
+              {isSubmitting ? 'Submitting...' : 'Submit Application'}
             </button>
           </div>
         </form>

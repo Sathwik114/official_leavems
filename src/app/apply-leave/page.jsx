@@ -1,18 +1,52 @@
-import { getEmployeeDetails } from "@/lib/payrollDb";
-import ApplyLeaveForm from "./ApplyLeaveForm";
+import { cookies } from 'next/headers';
+import * as jose from 'jose';
+import { getEmployeeDetails } from '@/lib/payrollDb';
+import { getLeaveApprovalFlow } from '@/lib/leaveApprovalConfig';
+import { ensureLeaveTables } from '@/lib/leaveDb';
+import ApplyLeaveForm from './ApplyLeaveForm';
 
 export default async function ApplyLeavePage({ searchParams }) {
+  // Initialize leave database tables on page load
+  try {
+    await ensureLeaveTables();
+  } catch (err) {
+    // Silently fail if table initialization errors
+  }
+
   const params = await searchParams;
-  const empcode = params?.empcode || "";
+  const empcode = params?.empcode || '';
 
   let employee = null;
-  if (empcode) {
+  let currentUserUsername = '';
+  let approvalFlow = null;
+
+  const cookieStore = await cookies();
+  const token = cookieStore.get('auth_token')?.value;
+
+  if (token) {
     try {
-      employee = await getEmployeeDetails(empcode);
+      const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+      const { payload } = await jose.jwtVerify(token, secret);
+      currentUserUsername = String(payload.username || payload.name || '');
     } catch (err) {
-      console.error("Employee fetch error:", err);
+      console.error('JWT Error:', err);
     }
   }
 
-  return <ApplyLeaveForm employee={employee} />;
+  if (empcode) {
+    try {
+      employee = await getEmployeeDetails(empcode);
+      approvalFlow = getLeaveApprovalFlow(employee?.EmpCode || empcode, currentUserUsername);
+    } catch (err) {
+      console.error('Employee fetch error:', err);
+    }
+  }
+
+  return (
+    <ApplyLeaveForm
+      employee={employee}
+      currentUserUsername={currentUserUsername}
+      approvalFlow={approvalFlow}
+    />
+  );
 }
