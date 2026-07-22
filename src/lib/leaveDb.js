@@ -1,13 +1,43 @@
 import sql from 'mssql';
 import { getEmployeeDetails as getPayrollEmployeeDetails } from './payrollDb';
 
-const DATABASE_NAME = process.env.LEAVE_DB_NAME || 'nextpractice';
+function parseSqlServerConnectionString(connectionString) {
+  if (!connectionString) return null;
 
-const baseConfig = {
-  user: 'sa',
-  password: 'sqlsa@2012',
-  server: 'PC20004',
-  port: 1433,
+  const match = connectionString.match(/^sqlserver:\/\/([^;:/]+)(?::(\d+))?/i);
+  if (!match) return null;
+
+  const values = Object.fromEntries(
+    connectionString
+      .slice(connectionString.indexOf(';') + 1)
+      .split(';')
+      .filter(Boolean)
+      .map((part) => part.split(/=(.*)/s))
+      .filter(([key]) => key)
+      .map(([key, value]) => [key.trim().toLowerCase(), (value || '').trim()])
+  );
+
+  return {
+    user: values.user,
+    password: values.password,
+    server: match[1],
+    port: Number(match[2] || 1433),
+    database: values.database,
+    options: {
+      encrypt: values.encrypt === 'true',
+      trustServerCertificate: values.trustservercertificate !== 'false',
+    },
+  };
+}
+
+const connectionStringConfig = parseSqlServerConnectionString(process.env.DATABASE_URL);
+const DATABASE_NAME = process.env.LEAVE_DB_NAME || connectionStringConfig?.database || 'OfficialLeave';
+
+const baseConfig = connectionStringConfig || {
+  user: process.env.LEAVE_DB_USER || process.env.DB_USER || 'sa',
+  password: process.env.LEAVE_DB_PASSWORD || process.env.DB_PASSWORD || '',
+  server: process.env.LEAVE_DB_SERVER || process.env.DB_SERVER || 'PC20004',
+  port: Number(process.env.LEAVE_DB_PORT || process.env.DB_PORT || 1433),
   options: {
     encrypt: false,
     trustServerCertificate: true,
@@ -197,7 +227,7 @@ export async function createLeaveRequest(payload) {
   const result = await pool.request()
     .input('ApplicantId', sql.NVarChar, String(payload.applicantId || '').trim())
     .input('ApplicantName', sql.NVarChar, payload.applicantName || '')
-    .input('LeaveType', sql.NVarChar, payload.leaveType || 'Earned Leave')
+    .input('LeaveType', sql.NVarChar, payload.leaveType || 'EL')
     .input('StartDate', sql.DateTime, payload.startDate)
     .input('EndDate', sql.DateTime, payload.endDate)
     .input('TotalDays', sql.Int, Number(payload.totalDays || 1))
@@ -228,6 +258,7 @@ export async function createLeaveRequest(payload) {
         Status,
         UpdatedAt
       )
+      OUTPUT INSERTED.*
       VALUES (
         @ApplicantId,
         @ApplicantName,
@@ -246,11 +277,71 @@ export async function createLeaveRequest(payload) {
         'PENDING',
         GETDATE()
       );
-      SELECT * FROM dbo.LeaveRequests WHERE Id = SCOPE_IDENTITY();
     `);
 
   // return the full inserted row for easier debugging
   return result.recordset[0] || null;
+}
+
+export async function createLeaveRequestWithInitialApproval(payload, approverId) {
+  await ensureLeaveTables();
+  const pool = await getPool();
+  const transaction = new sql.Transaction(pool);
+
+  await transaction.begin();
+
+  try {
+    const request = await transaction.request()
+      .input('ApplicantId', sql.NVarChar, String(payload.applicantId || '').trim())
+      .input('ApplicantName', sql.NVarChar, payload.applicantName || '')
+      .input('LeaveType', sql.NVarChar, payload.leaveType || 'EL')
+      .input('StartDate', sql.DateTime, payload.startDate)
+      .input('EndDate', sql.DateTime, payload.endDate)
+      .input('TotalDays', sql.Int, Number(payload.totalDays || 1))
+      .input('Reason', sql.NVarChar(sql.MAX), payload.reason || '')
+      .input('RelieverId', sql.NVarChar, payload.relieverId || null)
+      .input('RelieverName', sql.NVarChar, payload.relieverName || null)
+      .input('ContactNumber', sql.NVarChar, payload.contactNumber || null)
+      .input('AttachmentName', sql.NVarChar, payload.attachmentName || null)
+      .input('AttachmentType', sql.NVarChar, payload.attachmentType || null)
+      .input('ApprovalFlow', sql.NVarChar, payload.approvalFlow || '')
+      .input('CurrentApprover', sql.NVarChar, payload.currentApprover || '')
+      .query(`
+        INSERT INTO dbo.LeaveRequests (
+          ApplicantId, ApplicantName, LeaveType, StartDate, EndDate, TotalDays,
+          Reason, RelieverId, RelieverName, ContactNumber, AttachmentName,
+          AttachmentType, ApprovalFlow, CurrentApprover, Status, UpdatedAt
+        )
+        OUTPUT INSERTED.*
+        VALUES (
+          @ApplicantId, @ApplicantName, @LeaveType, @StartDate, @EndDate, @TotalDays,
+          @Reason, @RelieverId, @RelieverName, @ContactNumber, @AttachmentName,
+          @AttachmentType, @ApprovalFlow, @CurrentApprover, 'PENDING', GETDATE()
+        );
+      `);
+
+    const savedLeaveRequest = request.recordset[0];
+    if (!savedLeaveRequest?.Id) {
+      throw new Error('The leave request was inserted without an ID.');
+    }
+
+    await transaction.request()
+      .input('LeaveRequestId', sql.Int, savedLeaveRequest.Id)
+      .input('ApproverId', sql.NVarChar, String(approverId || '').trim())
+      .input('Decision', sql.NVarChar, 'PENDING')
+      .input('Remarks', sql.NVarChar(sql.MAX), '')
+      .input('StepNumber', sql.Int, 1)
+      .query(`
+        INSERT INTO dbo.LeaveApprovals (LeaveRequestId, ApproverId, Decision, Remarks, StepNumber)
+        VALUES (@LeaveRequestId, @ApproverId, @Decision, @Remarks, @StepNumber);
+      `);
+
+    await transaction.commit();
+    return savedLeaveRequest;
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
 }
 
 export async function addLeaveApproval(leaveRequestId, approverId, decision, remarks, stepNumber) {

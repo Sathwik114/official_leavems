@@ -99,7 +99,7 @@ export function buildLeaveRequestEmailContent(request, options = {}) {
             <!-- Header row -->
             <tr style="background-color: #f8fafc; border-bottom: 1px solid #cbd5e1;">
               <td colspan="2" style="padding: 10px 12px; font-weight: 600; color: #334155;">
-                Balance Leaves: Earn Leave: <strong>${request.EarnLeaveBalance ?? 0}</strong> | Sick Leave: <strong>${request.SickLeaveBalance ?? 0}</strong>
+                Balance Leaves: EL: <strong>${request.EarnLeaveBalance ?? 0}</strong> | SL: <strong>${request.SickLeaveBalance ?? 0}</strong>
               </td>
               <td colspan="2" style="padding: 10px 12px; font-weight: 600; color: #334155; text-align: right;">
                 Date of Application: <span style="color: #dc2626; font-weight: bold;">${formatDate(request.createdAt || new Date())}</span>

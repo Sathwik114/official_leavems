@@ -270,8 +270,8 @@ export default function LeaveApprovalsPage() {
               <div className="leaveDetailTable">
                 <div className="leaveDetailRow leaveDetailRowHeader">
                   <div className="leaveDetailCell leaveDetailCellLabel">Balance Leaves :-</div>
-                  <div className="leaveDetailCell">Earn Leave :- {activeRequest.EarnLeaveBalance ?? 0}</div>
-                  <div className="leaveDetailCell">Sick Leave :- {activeRequest.SickLeaveBalance ?? 0}</div>
+                  <div className="leaveDetailCell">EL :- {activeRequest.EarnLeaveBalance ?? 0}</div>
+                  <div className="leaveDetailCell">SL :- {activeRequest.SickLeaveBalance ?? 0}</div>
                   <div className="leaveDetailCell leaveDetailCellDate">
                     Date of Application :- <span className="leaveDetailHighlight">
                       {activeRequest.CreatedAt ? new Date(activeRequest.CreatedAt).toLocaleDateString('en-GB') : '-'}

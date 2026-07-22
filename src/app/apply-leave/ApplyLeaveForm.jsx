@@ -9,7 +9,7 @@ export default function ApplyLeaveForm({ employee, currentUserUsername, approval
   const router = useRouter();
   const empcode = searchParams.get('empcode') || '';
 
-  const [leaveType, setLeaveType] = useState('Earned Leave');
+  const [leaveType, setLeaveType] = useState('EL');
   const [startDate, setStartDate] = useState('');
   const [startHour, setStartHour] = useState('08');
   const [startMin, setStartMin] = useState('30');
@@ -33,7 +33,7 @@ export default function ApplyLeaveForm({ employee, currentUserUsername, approval
   const today = new Date().toLocaleDateString('en-GB');
 
   const totalDaysNum = parseInt(totalDays, 10) || 0;
-  const isSickLeaveOverThree = leaveType === 'Sick Leave' && totalDaysNum > 3;
+  const isSickLeaveOverThree = leaveType === 'SL' && totalDaysNum > 3;
   const isEsiOrMl = leaveType === 'ESI' || leaveType === 'ML';
   const requiresAttachment = isSickLeaveOverThree || isEsiOrMl;
 
@@ -172,14 +172,14 @@ export default function ApplyLeaveForm({ employee, currentUserUsername, approval
       <div className="leaveCard">
         <div className="leaveCardHeader">
           <h1 className="leaveTitle">Leave Application</h1>
-          <div className="leaveBalance">
+            <div className="leaveBalance">
             <span className="leaveBalanceLabel">Balance Leaves</span>
             <span className="leaveBalanceItem">
-              Earn Leave <strong>0</strong>
+              EL <strong>0</strong>
             </span>
             <span className="leaveBalanceDivider" />
             <span className="leaveBalanceItem">
-              Sick Leave <strong>0</strong>
+              SL <strong>0</strong>
             </span>
           </div>
         </div>
@@ -308,8 +308,8 @@ export default function ApplyLeaveForm({ employee, currentUserUsername, approval
               <div className="leaveField leaveFieldTiny">
                 <label>Leave Type</label>
                 <select value={leaveType} onChange={(e) => setLeaveType(e.target.value)}>
-                  <option value="Earned Leave">Earned Leave</option>
-                  <option value="Sick Leave">Sick Leave</option>
+                  <option value="EL">EL</option>
+                  <option value="SL">SL</option>
                   <option value="LWP">LWP</option>
                   <option value="COFF">COFF</option>
                   <option value="1Hour">1 Hour</option>

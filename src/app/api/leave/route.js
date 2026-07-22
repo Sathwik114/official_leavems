@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import * as jose from 'jose';
-import { createLeaveRequest, addLeaveApproval, getPendingApprovalsForUser, getApprovedRequestsForApprover, getLeaveRequestsForApplicant } from '@/lib/leaveDb';
+import { createLeaveRequestWithInitialApproval, getPendingApprovalsForUser, getApprovedRequestsForApprover, getLeaveRequestsForApplicant } from '@/lib/leaveDb';
 import { getLeaveApprovalFlow } from '@/lib/leaveApprovalConfig';
 import { getEmployeeDetails } from '@/lib/payrollDb';
 import { getUserEmail, sendMail, buildLeaveRequestEmailContent, getApprovalLink, getDirectApproveLink } from '@/lib/mail';
@@ -85,10 +85,10 @@ export async function POST(request) {
       ? (await getEmployeeDetails(String(approvalFlow.flow[1]).trim()).catch(() => null))?.EmpName || approvalFlow.flow[1]
       : '';
 
-    const savedLeaveRequest = await createLeaveRequest({
+    const savedLeaveRequest = await createLeaveRequestWithInitialApproval({
       applicantId: String(applicantId),
       applicantName: applicantName || applicantEmployee?.EmpName || '',
-      leaveType: leaveType || 'Earned Leave',
+      leaveType: leaveType || 'EL',
       startDate: new Date(startDate),
       endDate: new Date(endDate),
       totalDays: Number(totalDays) || 1,
@@ -100,7 +100,7 @@ export async function POST(request) {
       attachmentType: attachmentType || null,
       approvalFlow: approvalFlow.flow.join(','),
       currentApprover: approvalFlow.initialApprover,
-    });
+    }, approvalFlow.initialApprover);
 
     // createLeaveRequest now returns the inserted row; use its Id property
     const leaveId = savedLeaveRequest?.Id || savedLeaveRequest?.id || null;
@@ -109,15 +109,13 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Failed to determine saved leave request id.' }, { status: 500 });
     }
 
-    await addLeaveApproval(leaveId, approvalFlow.initialApprover, 'PENDING', '', 1);
-
     const firstApproverEmail = getUserEmail(approvalFlow.initialApprover);
     const emailRequest = {
       applicantId: String(applicantId),
       applicantName: applicantName || applicantEmployee?.EmpName || '',
       department: applicantEmployee?.DeptCode || '',
       section: applicantEmployee?.Section || '',
-      leaveType: leaveType || 'Earned Leave',
+      leaveType: leaveType || 'EL',
       startDate: new Date(startDate),
       endDate: new Date(endDate),
       totalDays: Number(totalDays) || 1,
