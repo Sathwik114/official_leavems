@@ -1,13 +1,14 @@
 import { NextResponse } from 'next/server';
-import { getLeaveRequestById, addLeaveApproval, updateLeaveRequestStatus } from '@/lib/leaveDb';
+import { getLeaveRequestById, addLeaveApproval, updateLeaveRequestStatus, updateLeaveRequestRejection } from '@/lib/leaveDb';
 import { getEmployeeDetails } from '@/lib/payrollDb';
-import { getUserEmail, sendMail, buildLeaveRequestEmailContent, getApprovalLink, getDirectApproveLink } from '@/lib/mail';
+import { getUserEmail, sendMail, buildLeaveRequestEmailContent, getApprovalLink, getDirectApproveLink, getDirectRejectLink } from '@/lib/mail';
 
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
     const leaveIdStr = searchParams.get('id');
     const approverId = searchParams.get('approver');
+    const action = searchParams.get('action') || 'approve';
 
     if (!leaveIdStr || !approverId) {
       return serveHtmlResponse(
@@ -77,6 +78,10 @@ export async function GET(request) {
       }
     }
 
+    if (action === 'reject') {
+      return serveRejectPrompt(leaveRequestId, targetApproverId);
+    }
+
     // Proceed to approve
     const nextApprover = flow[currentStep + 1] || null;
     const decisionValue = 'APPROVED';
@@ -127,6 +132,7 @@ export async function GET(request) {
         senderName: approverName,
         approvalLink: getApprovalLink(leaveRequestId, nextApprover),
         directApproveLink: getDirectApproveLink(leaveRequestId, nextApprover),
+        directRejectLink: getDirectRejectLink(leaveRequestId, nextApprover),
       });
     } else {
       recipientEmail = getUserEmail(leaveRequest.ApplicantId);
@@ -167,6 +173,108 @@ export async function GET(request) {
       false
     );
   }
+}
+
+export async function POST(request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const leaveRequestId = Number(searchParams.get('id'));
+    const targetApproverId = String(searchParams.get('approver') || '').trim();
+    const { reason } = await request.json();
+    const rejectionReason = String(reason || '').trim();
+
+    if (!leaveRequestId || !targetApproverId || !rejectionReason) {
+      return NextResponse.json({ error: 'A rejection reason is required.' }, { status: 400 });
+    }
+
+    const leaveRequest = await getLeaveRequestById(leaveRequestId);
+    if (!leaveRequest) {
+      return NextResponse.json({ error: 'Leave request not found.' }, { status: 404 });
+    }
+
+    const currentApproverId = String(leaveRequest.CurrentApproverId || '').trim();
+    if (leaveRequest.Status !== 'PENDING' || currentApproverId !== targetApproverId) {
+      return NextResponse.json({ error: 'This request can no longer be rejected from this link.' }, { status: 409 });
+    }
+
+    const flow = String(leaveRequest.ApprovalFlow || '').split(',').filter(Boolean);
+    const currentStep = flow.indexOf(currentApproverId);
+    if (currentStep === -1) {
+      return NextResponse.json({ error: 'Approver is not configured for this request.' }, { status: 403 });
+    }
+
+    await addLeaveApproval(leaveRequestId, targetApproverId, 'REJECTED', rejectionReason, currentStep + 1);
+    await updateLeaveRequestRejection(leaveRequestId, targetApproverId, rejectionReason);
+
+    const approverName = (await getEmployeeDetails(targetApproverId).catch(() => null))?.EmpName || targetApproverId;
+    const applicantEmployee = await getEmployeeDetails(leaveRequest.ApplicantId);
+    const emailRequest = {
+      applicantId: leaveRequest.ApplicantId,
+      applicantName: leaveRequest.ApplicantName || applicantEmployee?.EmpName || '',
+      department: leaveRequest.Department || applicantEmployee?.DeptCode || '',
+      section: leaveRequest.Section || applicantEmployee?.Section || '',
+      leaveType: leaveRequest.LeaveType,
+      startDate: leaveRequest.StartDate,
+      endDate: leaveRequest.EndDate,
+      totalDays: leaveRequest.TotalDays,
+      reason: leaveRequest.Reason,
+      relieverId: leaveRequest.RelieverId || '',
+      relieverName: leaveRequest.RelieverName || '',
+      contactNumber: leaveRequest.ContactNumber || '',
+      approvalFlow: flow,
+    };
+
+    try {
+      const content = buildLeaveRequestEmailContent(emailRequest, {
+        action: 'Rejected',
+        currentApproverName: approverName,
+        status: 'REJECTED',
+        remarks: rejectionReason,
+        senderName: approverName,
+      });
+      await sendMail({
+        to: getUserEmail(leaveRequest.ApplicantId),
+        subject: `Leave Request Rejected: ${emailRequest.applicantName}`,
+        html: content.html,
+        text: content.text,
+      });
+    } catch (mailError) {
+      console.error('Failed to send rejection notification:', mailError);
+    }
+
+    return NextResponse.json({ success: true, applicantName: emailRequest.applicantName });
+  } catch (error) {
+    console.error('Direct rejection error:', error);
+    return NextResponse.json({ error: 'Unable to reject the leave request.' }, { status: 500 });
+  }
+}
+
+function serveRejectPrompt(leaveRequestId, approverId) {
+  const actionUrl = `/api/leave/approve-direct?id=${encodeURIComponent(leaveRequestId)}&approver=${encodeURIComponent(approverId)}&action=reject`;
+  const html = `<!doctype html>
+    <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Reject Leave Request</title></head>
+    <body style="font-family:Arial,sans-serif;background:#f8fafc;display:grid;place-items:center;min-height:100vh;margin:0;color:#0f172a;">
+      <main style="background:#fff;padding:32px;border-radius:12px;max-width:440px;text-align:center;box-shadow:0 10px 25px rgba(0,0,0,.1);">
+        <h1 style="margin-top:0;">Reject leave request?</h1>
+        <p id="message">You will be asked for a rejection reason.</p>
+        <button id="reject" style="border:0;border-radius:6px;background:#dc2626;color:#fff;padding:12px 24px;font-weight:700;cursor:pointer;">Reject Request</button>
+      </main>
+      <script>
+        document.getElementById('reject').addEventListener('click', async () => {
+          const reason = window.prompt('Please enter the rejection reason:');
+          if (!reason || !reason.trim()) return;
+          const button = document.getElementById('reject');
+          button.disabled = true;
+          document.getElementById('message').textContent = 'Saving rejection…';
+          const response = await fetch('${actionUrl}', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason }) });
+          const data = await response.json();
+          document.getElementById('message').textContent = response.ok ? 'Leave request rejected. The approval flow has stopped.' : (data.error || 'Unable to reject the request.');
+          button.style.display = 'none';
+        });
+      </script>
+    </body></html>`;
+  return new NextResponse(html, { headers: { 'Content-Type': 'text/html' } });
 }
 
 function serveHtmlResponse(title, message, isSuccess) {

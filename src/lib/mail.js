@@ -71,6 +71,7 @@ export function buildLeaveRequestEmailContent(request, options = {}) {
     senderName = 'HR Department',
     approvalLink = '',
     directApproveLink = '',
+    directRejectLink = '',
   } = options;
 
   const approvalFlow = Array.isArray(request.approvalFlow)
@@ -175,6 +176,13 @@ export function buildLeaveRequestEmailContent(request, options = {}) {
             </a>
           </div>
           ` : ''}
+          ${directRejectLink ? `
+          <div style="margin-top: 12px; margin-bottom: 8px;">
+            <a href="${directRejectLink}" style="display: inline-block; padding: 10px 24px; background: #ffffff; color: #dc2626; border: 1px solid #dc2626; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 14px;">
+              Reject Request
+            </a>
+          </div>
+          ` : ''}
           
           ${approvalLink ? `
           <div style="${directApproveLink ? 'margin-top: 12px;' : 'margin-top: 20px;'} margin-bottom: 8px;">
@@ -207,6 +215,7 @@ export function buildLeaveRequestEmailContent(request, options = {}) {
     `Current Approver: ${currentApproverName || '-'}`,
     `Next Approver: ${nextApproverName || '-'}`,
     `Direct Approve Link: ${directApproveLink || '-'}`,
+    `Direct Reject Link: ${directRejectLink || '-'}`,
     `Approval Link: ${approvalLink || '-'}`,
     `Status: ${status}`,
     `Remarks: ${remarks || '-'}`,
@@ -234,6 +243,19 @@ export function getDirectApproveLink(leaveId, approverId) {
 
   const url = new URL(`${APP_URL}/api/leave/approve-direct`);
   url.searchParams.set('id', id);
+  if (approverId) {
+    url.searchParams.set('approver', normalizeUserId(approverId));
+  }
+  return url.toString();
+}
+
+export function getDirectRejectLink(leaveId, approverId) {
+  const id = String(leaveId || '').trim();
+  if (!id) return '';
+
+  const url = new URL(`${APP_URL}/api/leave/approve-direct`);
+  url.searchParams.set('id', id);
+  url.searchParams.set('action', 'reject');
   if (approverId) {
     url.searchParams.set('approver', normalizeUserId(approverId));
   }

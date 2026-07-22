@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { addLeaveApproval, getLeaveRequestById, updateLeaveRequestStatus } from '@/lib/leaveDb';
 import { getEmployeeDetails } from '@/lib/payrollDb';
-import { getUserEmail, sendMail, buildLeaveRequestEmailContent, getApprovalLink, getDirectApproveLink } from '@/lib/mail';
+import { getUserEmail, sendMail, buildLeaveRequestEmailContent, getApprovalLink, getDirectApproveLink, getDirectRejectLink } from '@/lib/mail';
 
 export async function POST(request, { params }) {
   try {
@@ -82,6 +82,7 @@ export async function POST(request, { params }) {
           senderName: approverName,
           approvalLink: getApprovalLink(leaveRequestId, nextApprover),
           directApproveLink: getDirectApproveLink(leaveRequestId, nextApprover),
+          directRejectLink: getDirectRejectLink(leaveRequestId, nextApprover),
         });
       } else {
         recipientEmail = getUserEmail(leaveRequest.ApplicantId);

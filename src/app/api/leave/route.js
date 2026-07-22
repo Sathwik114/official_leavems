@@ -4,7 +4,7 @@ import * as jose from 'jose';
 import { createLeaveRequestWithInitialApproval, getPendingApprovalsForUser, getApprovedRequestsForApprover, getLeaveRequestsForApplicant } from '@/lib/leaveDb';
 import { getLeaveApprovalFlow } from '@/lib/leaveApprovalConfig';
 import { getEmployeeDetails } from '@/lib/payrollDb';
-import { getUserEmail, sendMail, buildLeaveRequestEmailContent, getApprovalLink, getDirectApproveLink } from '@/lib/mail';
+import { getUserEmail, sendMail, buildLeaveRequestEmailContent, getApprovalLink, getDirectApproveLink, getDirectRejectLink } from '@/lib/mail';
 
 export async function GET() {
   try {
@@ -138,6 +138,7 @@ export async function POST(request) {
       senderName: 'HR Department',
       approvalLink: getApprovalLink(leaveId, approvalFlow.initialApprover),
       directApproveLink: getDirectApproveLink(leaveId, approvalFlow.initialApprover),
+      directRejectLink: getDirectRejectLink(leaveId, approvalFlow.initialApprover),
     });
 
     try {
