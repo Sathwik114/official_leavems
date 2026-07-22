@@ -143,8 +143,10 @@ async function enrichLeaveRequest(request) {
     ...request,
     CurrentApproverId: request.CurrentApprover || '',
     ApplicantName: request.ApplicantName || applicantEmployee?.EmpName || request.ApplicantId || '',
-    Department: applicantEmployee?.DeptCode || request.Department || '',
-    Section: applicantEmployee?.Section || request.Section || '',
+    Department: request.Department || applicantEmployee?.DeptCode || '',
+    Section: request.Section || applicantEmployee?.Section || '',
+    Shift: applicantEmployee?.Shift || request.Shift || '',
+    EmpType: applicantEmployee?.EmpType || request.EmpType || '',
     RelieverName: request.RelieverName || relieverEmployee?.EmpName || request.RelieverId || '',
     CurrentApprover: currentApproverEmployee?.EmpName || request.CurrentApprover || '',
     ApprovedBy: approvedByNames || request.ApprovedBy || '',
@@ -168,6 +170,10 @@ export async function ensureLeaveTables() {
         Id INT IDENTITY(1,1) PRIMARY KEY,
         ApplicantId NVARCHAR(100) NOT NULL,
         ApplicantName NVARCHAR(200) NULL,
+        Department NVARCHAR(100) NULL,
+        Section NVARCHAR(100) NULL,
+        Shift NVARCHAR(100) NULL,
+        EmpType NVARCHAR(100) NULL,
         LeaveType NVARCHAR(100) NOT NULL,
         StartDate DATETIME NOT NULL,
         EndDate DATETIME NOT NULL,
@@ -223,6 +229,15 @@ export async function ensureLeaveTables() {
       ALTER TABLE dbo.LeaveRequests ADD RejectedAt DATETIME NULL;
     END;
 
+    IF COL_LENGTH('dbo.LeaveRequests', 'Department') IS NULL
+      ALTER TABLE dbo.LeaveRequests ADD Department NVARCHAR(100) NULL;
+    IF COL_LENGTH('dbo.LeaveRequests', 'Section') IS NULL
+      ALTER TABLE dbo.LeaveRequests ADD Section NVARCHAR(100) NULL;
+    IF COL_LENGTH('dbo.LeaveRequests', 'Shift') IS NULL
+      ALTER TABLE dbo.LeaveRequests ADD Shift NVARCHAR(100) NULL;
+    IF COL_LENGTH('dbo.LeaveRequests', 'EmpType') IS NULL
+      ALTER TABLE dbo.LeaveRequests ADD EmpType NVARCHAR(100) NULL;
+
     -- Workflow values can contain employee IDs and comma-separated approver IDs.
     -- Older deployments created these columns as INT, which prevents saves.
     IF EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = 'LeaveRequests' AND COLUMN_NAME = 'ApplicantId' AND DATA_TYPE <> 'nvarchar')
@@ -257,10 +272,15 @@ export async function ensureLeaveTables() {
 export async function createLeaveRequest(payload) {
   await ensureLeaveTables();
   const pool = await getPool();
+  const payrollEmployee = await getPayrollEmployeeDetails(payload.applicantId).catch(() => null);
 
   const result = await pool.request()
     .input('ApplicantId', sql.NVarChar, String(payload.applicantId || '').trim())
     .input('ApplicantName', sql.NVarChar, payload.applicantName || '')
+    .input('Department', sql.NVarChar, payload.department || payrollEmployee?.DeptCode || '')
+    .input('Section', sql.NVarChar, payload.section || payrollEmployee?.Section || '')
+    .input('Shift', sql.NVarChar, payload.shift || payrollEmployee?.Shift || '')
+    .input('EmpType', sql.NVarChar, payload.empType || payrollEmployee?.EmpType || '')
     .input('LeaveType', sql.NVarChar, payload.leaveType || 'EL')
     .input('StartDate', sql.DateTime, payload.startDate)
     .input('EndDate', sql.DateTime, payload.endDate)
@@ -277,6 +297,10 @@ export async function createLeaveRequest(payload) {
       INSERT INTO dbo.LeaveRequests (
         ApplicantId,
         ApplicantName,
+        Department,
+        Section,
+        Shift,
+        EmpType,
         LeaveType,
         StartDate,
         EndDate,
@@ -296,6 +320,10 @@ export async function createLeaveRequest(payload) {
       VALUES (
         @ApplicantId,
         @ApplicantName,
+        @Department,
+        @Section,
+        @Shift,
+        @EmpType,
         @LeaveType,
         @StartDate,
         @EndDate,
@@ -320,6 +348,7 @@ export async function createLeaveRequest(payload) {
 export async function createLeaveRequestWithInitialApproval(payload, approverId) {
   await ensureLeaveTables();
   const pool = await getPool();
+  const payrollEmployee = await getPayrollEmployeeDetails(payload.applicantId).catch(() => null);
   const transaction = new sql.Transaction(pool);
 
   await transaction.begin();
@@ -328,6 +357,10 @@ export async function createLeaveRequestWithInitialApproval(payload, approverId)
     const request = await transaction.request()
       .input('ApplicantId', sql.NVarChar, String(payload.applicantId || '').trim())
       .input('ApplicantName', sql.NVarChar, payload.applicantName || '')
+      .input('Department', sql.NVarChar, payload.department || payrollEmployee?.DeptCode || '')
+      .input('Section', sql.NVarChar, payload.section || payrollEmployee?.Section || '')
+      .input('Shift', sql.NVarChar, payload.shift || payrollEmployee?.Shift || '')
+      .input('EmpType', sql.NVarChar, payload.empType || payrollEmployee?.EmpType || '')
       .input('LeaveType', sql.NVarChar, payload.leaveType || 'EL')
       .input('StartDate', sql.DateTime, payload.startDate)
       .input('EndDate', sql.DateTime, payload.endDate)
@@ -342,13 +375,13 @@ export async function createLeaveRequestWithInitialApproval(payload, approverId)
       .input('CurrentApprover', sql.NVarChar, payload.currentApprover || '')
       .query(`
         INSERT INTO dbo.LeaveRequests (
-          ApplicantId, ApplicantName, LeaveType, StartDate, EndDate, TotalDays,
+          ApplicantId, ApplicantName, Department, Section, Shift, EmpType, LeaveType, StartDate, EndDate, TotalDays,
           Reason, RelieverId, RelieverName, ContactNumber, AttachmentName,
           AttachmentType, ApprovalFlow, CurrentApprover, Status, UpdatedAt
         )
         OUTPUT INSERTED.*
         VALUES (
-          @ApplicantId, @ApplicantName, @LeaveType, @StartDate, @EndDate, @TotalDays,
+          @ApplicantId, @ApplicantName, @Department, @Section, @Shift, @EmpType, @LeaveType, @StartDate, @EndDate, @TotalDays,
           @Reason, @RelieverId, @RelieverName, @ContactNumber, @AttachmentName,
           @AttachmentType, @ApprovalFlow, @CurrentApprover, 'PENDING', GETDATE()
         );
@@ -446,6 +479,10 @@ export async function getLeaveRequestById(leaveRequestId) {
         Id,
         ApplicantId,
         ApplicantName,
+        Department,
+        Section,
+        Shift,
+        EmpType,
         LeaveType,
         StartDate,
         EndDate,
@@ -482,6 +519,10 @@ export async function getApprovedRequestsForApprover(approverId) {
         lr.Id,
         lr.ApplicantId,
         lr.ApplicantName,
+        lr.Department,
+        lr.Section,
+        lr.Shift,
+        lr.EmpType,
         lr.LeaveType,
         lr.StartDate,
         lr.EndDate,
@@ -518,6 +559,10 @@ export async function getPendingApprovalsForUser(currentUserUsername) {
         lr.Id,
         lr.ApplicantId,
         lr.ApplicantName,
+        lr.Department,
+        lr.Section,
+        lr.Shift,
+        lr.EmpType,
         lr.LeaveType,
         lr.StartDate,
         lr.EndDate,
@@ -552,6 +597,10 @@ export async function getLeaveRequestsForApplicant(applicantId) {
         lr.Id,
         lr.ApplicantId,
         lr.ApplicantName,
+        lr.Department,
+        lr.Section,
+        lr.Shift,
+        lr.EmpType,
         lr.LeaveType,
         lr.StartDate,
         lr.EndDate,
@@ -585,6 +634,10 @@ export async function getAllLeaveRequests() {
         lr.Id,
         lr.ApplicantId,
         lr.ApplicantName,
+        lr.Department,
+        lr.Section,
+        lr.Shift,
+        lr.EmpType,
         lr.LeaveType,
         lr.StartDate,
         lr.EndDate,

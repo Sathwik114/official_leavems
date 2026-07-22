@@ -32,7 +32,9 @@ export async function getEmployeeDetails(empcode) {
           EmpCode,
           EmpName,
           DeptCode,
-          NSecCode AS Section
+          NSecCode AS Section,
+          Shift,
+          EmpType
       FROM EmpMast
       WHERE LTRIM(RTRIM(EmpCode)) = @empcode
     `);

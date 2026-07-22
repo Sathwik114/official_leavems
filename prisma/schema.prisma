@@ -22,6 +22,10 @@ model LeaveRequest {
   id             Int              @id @default(autoincrement())
   applicantId    String
   applicantName  String?
+  department     String?
+  section        String?
+  shift          String?
+  empType        String?
   leaveType      String
   startDate      DateTime
   endDate        DateTime

@@ -82,3 +82,22 @@ export async function getAttendanceData(empcode, month, year) {
     return [];
   }
 }
+
+export async function getAttendanceEmployeeDetails(empcode) {
+  const pool = await getPool();
+
+  const result = await pool
+    .request()
+    .input('empcode', sql.NVarChar, String(empcode || '').trim())
+    .query(`
+      SELECT TOP 1
+        EmpCode,
+        DeptCode,
+        NSecCode AS Section,
+        Shift
+      FROM dbo.EmpMast
+      WHERE LTRIM(RTRIM(EmpCode)) = @empcode
+    `);
+
+  return result.recordset[0] || null;
+}

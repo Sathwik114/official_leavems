@@ -85,6 +85,8 @@ export default function MyLeavesPage() {
                   <th>Applicant Name</th>
                   <th>Department</th>
                   <th>Section</th>
+                  <th>Shift</th>
+                  <th>Employee Type</th>
                   <th>Leave Type</th>
                   <th>Reason</th>
                   <th>Status</th>
@@ -102,6 +104,8 @@ export default function MyLeavesPage() {
                     <td>{request.ApplicantName || '-'}</td>
                     <td>{request.Department || '-'}</td>
                     <td>{request.Section || '-'}</td>
+                    <td>{request.Shift || '-'}</td>
+                    <td>{request.EmpType || '-'}</td>
                     <td>{request.LeaveType}</td>
                     <td title={request.Reason || ''}>{truncateReason(request.Reason)}</td>
                     <td>{request.Status}</td>

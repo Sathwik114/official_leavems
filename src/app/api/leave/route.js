@@ -88,6 +88,10 @@ export async function POST(request) {
     const savedLeaveRequest = await createLeaveRequestWithInitialApproval({
       applicantId: String(applicantId),
       applicantName: applicantName || applicantEmployee?.EmpName || '',
+      department: applicantEmployee?.DeptCode || '',
+      section: applicantEmployee?.Section || '',
+      shift: applicantEmployee?.Shift || '',
+      empType: applicantEmployee?.EmpType || '',
       leaveType: leaveType || 'EL',
       startDate: new Date(startDate),
       endDate: new Date(endDate),

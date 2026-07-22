@@ -94,6 +94,8 @@ export default function LeaveApprovalsPage() {
         <td>{request.ApplicantName || '-'}</td>
         <td>{request.Department || '-'}</td>
         <td>{request.Section || '-'}</td>
+        <td>{request.Shift || '-'}</td>
+        <td>{request.EmpType || '-'}</td>
         <td>{request.LeaveType}</td>
         <td>{request.TotalDays}</td>
         <td>{request.Reason}</td>
@@ -209,6 +211,8 @@ export default function LeaveApprovalsPage() {
                         <th>Applicant Name</th>
                         <th>Department</th>
                         <th>Section</th>
+                        <th>Shift</th>
+                        <th>Employee Type</th>
                         <th>Leave Type</th>
                         <th>Days</th>
                         <th>Reason</th>
@@ -245,6 +249,8 @@ export default function LeaveApprovalsPage() {
                       <th>Applicant Name</th>
                       <th>Department</th>
                       <th>Section</th>
+                      <th>Shift</th>
+                      <th>Employee Type</th>
                       <th>Leave Type</th>
                       <th>Days</th>
                       <th>Reason</th>
@@ -297,6 +303,13 @@ export default function LeaveApprovalsPage() {
                   <div className="leaveDetailCell leaveDetailCellValue">{activeRequest.Department || '-'}</div>
                   <div className="leaveDetailCell leaveDetailCellLabel">Section :-</div>
                   <div className="leaveDetailCell leaveDetailCellValue">{activeRequest.Section || '-'}</div>
+                </div>
+
+                <div className="leaveDetailRow">
+                  <div className="leaveDetailCell leaveDetailCellLabel">Shift :-</div>
+                  <div className="leaveDetailCell leaveDetailCellValue">{activeRequest.Shift || '-'}</div>
+                  <div className="leaveDetailCell leaveDetailCellLabel">Employee Type :-</div>
+                  <div className="leaveDetailCell leaveDetailCellValue">{activeRequest.EmpType || '-'}</div>
                 </div>
 
                 <div className="leaveDetailRow">

@@ -45,6 +45,10 @@ async function ensureDestinationTables(pool) {
         Id INT IDENTITY(1,1) PRIMARY KEY,
         ApplicantId NVARCHAR(100) NOT NULL,
         ApplicantName NVARCHAR(200) NULL,
+        Department NVARCHAR(100) NULL,
+        Section NVARCHAR(100) NULL,
+        Shift NVARCHAR(100) NULL,
+        EmpType NVARCHAR(100) NULL,
         LeaveType NVARCHAR(100) NOT NULL,
         StartDate DATETIME NOT NULL,
         EndDate DATETIME NOT NULL,
@@ -80,6 +84,15 @@ async function ensureDestinationTables(pool) {
         CreatedAt DATETIME NOT NULL DEFAULT GETDATE()
       );
     END;
+
+    IF COL_LENGTH('dbo.LeaveRequests', 'Department') IS NULL
+      ALTER TABLE dbo.LeaveRequests ADD Department NVARCHAR(100) NULL;
+    IF COL_LENGTH('dbo.LeaveRequests', 'Section') IS NULL
+      ALTER TABLE dbo.LeaveRequests ADD Section NVARCHAR(100) NULL;
+    IF COL_LENGTH('dbo.LeaveRequests', 'Shift') IS NULL
+      ALTER TABLE dbo.LeaveRequests ADD Shift NVARCHAR(100) NULL;
+    IF COL_LENGTH('dbo.LeaveRequests', 'EmpType') IS NULL
+      ALTER TABLE dbo.LeaveRequests ADD EmpType NVARCHAR(100) NULL;
 
     IF EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = 'LeaveRequests' AND COLUMN_NAME = 'ApplicantId' AND DATA_TYPE <> 'nvarchar')
       ALTER TABLE dbo.LeaveRequests ALTER COLUMN ApplicantId NVARCHAR(100) NOT NULL;
