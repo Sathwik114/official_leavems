@@ -165,7 +165,7 @@
 
 .dashboardAttendanceTableWrap {
   margin-top: 0.5rem;
-  overflow-x: hidden;        /* was: auto — no horizontal scrollbar */
+  overflow-x: auto;        /* was: hidden */
   overflow-y: auto;
   max-height: 28rem;
   border: 1px solid #fce7f3;
@@ -196,7 +196,7 @@
 
 .dashboardAttendance table {
   width: 100%;
-  table-layout: fixed;       /* forces columns to share available width instead of overflowing */
+  table-layout: auto;      /* was: fixed */
   border-collapse: collapse;
   font-size: 0.9rem;
 }
@@ -264,5 +264,40 @@
   font-size: 0.9rem;
   margin: 0;
 }
+
+.attendanceTimeEditor {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  flex-wrap: nowrap;
+  min-width: 9.5rem;       /* enough for 3 selects + the tick button */
+}
+
+.attendanceTimeEditor select {
+  width: 3.3rem;
+  padding: 0.28rem 0.15rem;
+  border: 1px solid #fbcfe8;
+  border-radius: 0.35rem;
+  background: #fff;
+  font-size: 0.75rem;
+}
+
+.attendanceTimeEditor select:nth-child(3) {
+  width: 3.1rem;
+}
+
+.attendanceTimeSave {
+  width: 1.7rem;
+  height: 1.7rem;
+  border: 0;
+  border-radius: 999px;
+  background: #16a34a;
+  color: #fff;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.attendanceTimeSave:disabled { opacity: 0.55; cursor: wait; }
+.attendanceTimeMessage { margin: 0 0 0.75rem !important; color: #047857 !important; font-weight: 600; }
 
 

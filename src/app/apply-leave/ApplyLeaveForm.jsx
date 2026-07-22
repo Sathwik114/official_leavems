@@ -259,7 +259,7 @@ export default function ApplyLeaveForm({ employee, currentUserUsername, approval
                       ))}
                     </select>
                     <select value={startMin} onChange={(e) => setStartMin(e.target.value)}>
-                      {['00', '15', '30', '45'].map((m) => (
+                      {['00','05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'].map((m) => (
                         <option key={m} value={m}>{m}</option>
                       ))}
                     </select>
@@ -284,7 +284,7 @@ export default function ApplyLeaveForm({ employee, currentUserUsername, approval
                       ))}
                     </select>
                     <select value={endMin} onChange={(e) => setEndMin(e.target.value)}>
-                      {['00', '15', '30', '45'].map((m) => (
+                      {['00','05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'].map((m) => (
                         <option key={m} value={m}>{m}</option>
                       ))}
                     </select>
@@ -312,6 +312,7 @@ export default function ApplyLeaveForm({ employee, currentUserUsername, approval
                   <option value="SL">SL</option>
                   <option value="LWP">LWP</option>
                   <option value="COFF">COFF</option>
+                  <option value="OD">OD</option>
                   <option value="1Hour">1 Hour</option>
                 </select>
               </div>

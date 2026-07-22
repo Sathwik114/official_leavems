@@ -1,11 +1,11 @@
 import './page.css';
 import { cookies } from 'next/headers';
 import * as jose from 'jose';
-import Link from 'next/link';
 import { getAttendance } from '@/lib/attendanceDb';
 import { ensureLeaveTables } from '@/lib/leaveDb';
 import { getEmployeeDetails } from '@/lib/payrollDb';
 import { isCccOrHrUser } from '@/lib/leaveApprovalConfig';
+import AttendanceTable from './AttendanceTable';
 
 export default async function Dashboard() {
   // Initialize leave database tables on dashboard load
@@ -91,63 +91,7 @@ export default async function Dashboard() {
         {attendance.length === 0 ? (
           <p>No attendance records found.</p>
         ) : (
-          <div className="dashboardAttendanceTableWrap">
-            <table className="attendanceTable">
-              <thead>
-                <tr>
-                  <th>Employee ID</th>
-                  <th>Employee Name</th>
-                  <th>Department</th>
-                  <th>Date</th>
-                  <th>Attendance</th>
-                  <th>In Time</th>
-                  <th>Out Time</th>
-                  <th>Apply For a Leave</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {attendanceWithEmployeeNames.map((row, index) => (
-                  <tr key={`${row.Empcode || 'emp'}-${row.AttDate ? new Date(row.AttDate).toISOString() : index}`}>
-                    <td>{row.EmployeeCode}</td>
-                    <td>{row.EmployeeName}</td>
-                    <td>{row.Department}</td>
-
-                    <td>
-                      {row.AttDate
-                        ? new Date(row.AttDate).toLocaleDateString()
-                        : '-'}
-                    </td>
-
-                    <td>{row.AttType || '-'}</td>
-
-                    <td>
-                      {row.InTime instanceof Date
-                        ? row.InTime.toLocaleTimeString("en-GB", { hour12: false })
-                        : row.InTime || "-"}
-                    </td>
-
-                    <td>
-                      {row.OutTime instanceof Date
-                        ? row.OutTime.toLocaleTimeString("en-GB", { hour12: false })
-                        : row.OutTime || "-"}
-                    </td>
-                    <td>
-                      {!isCccOrHrUser(user.username) ? (
-                        <Link href={`/apply-leave?empcode=${row.Empcode}`}>
-                          <button type="button" className="applyLeaveButton">Apply Now</button>
-                        </Link>
-                      ) : (
-                        <button type="button" className="applyLeaveButton" disabled>
-                          Not Eligible
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <AttendanceTable attendance={attendanceWithEmployeeNames} canApplyLeave={!isCccOrHrUser(user.username)} />
         )}
       </div>
 

@@ -42,7 +42,9 @@ export async function getAttendance(empcode) {
         AttDate,
         AttType,
         InTime,
-        OutTime
+        ActInTime,
+        OutTime,
+        ActOutTime
       FROM ${tableName}
       WHERE Empcode = @empcode
       ORDER BY AttDate DESC
@@ -80,6 +82,68 @@ export async function getAttendanceData(empcode, month, year) {
   } catch (err) {
     console.error(`Error fetching attendance for ${empcode}:`, err);
     return [];
+  }
+}
+
+function getCurrentAttendanceTableName() {
+  const now = new Date();
+  return `CAP${String(now.getMonth() + 1).padStart(2, '0')}${now.getFullYear()}`;
+}
+
+export async function updateAttendanceTime(empcode, attendanceDate, timeField, timeValue) {
+  const columnMap = {
+    in: ['ActInTime', 'InTime'],
+    out: ['ActOutTime', 'OutTime'],
+  };
+  const columns = columnMap[timeField];
+
+  if (!columns) {
+    throw new Error('Time field must be either "in" or "out".');
+  }
+
+  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(String(timeValue || ''))) {
+    throw new Error('Time must be in HH:mm format.');
+  }
+
+  const pool = await getPool();
+  const tableName = getCurrentAttendanceTableName();
+  const typeResult = await pool.request()
+    .input('TableName', sql.NVarChar, tableName)
+    .query(`
+      SELECT COLUMN_NAME, DATA_TYPE
+      FROM INFORMATION_SCHEMA.COLUMNS
+      WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = @TableName
+        AND COLUMN_NAME IN ('ActInTime', 'InTime', 'ActOutTime', 'OutTime');
+    `);
+
+  const types = new Map(typeResult.recordset.map((column) => [column.COLUMN_NAME, column.DATA_TYPE]));
+  if (!types.has(columns[0]) || !types.has(columns[1])) {
+    throw new Error(`The current attendance table does not contain ${columns.join(' and ')}.`);
+  }
+
+  const dateTimeTypes = new Set(['datetime', 'datetime2', 'smalldatetime', 'datetimeoffset']);
+  const timeExpression = (column) => (
+    dateTimeTypes.has(types.get(column).toLowerCase())
+      ? "CAST(CONVERT(varchar(10), @AttendanceDate, 120) + ' ' + @TimeValue + ':00' AS datetime)"
+      : "@TimeValue + ':00'"
+  );
+
+  const result = await pool.request()
+    .input('EmpCode', sql.NVarChar, String(empcode || '').trim())
+    .input('AttendanceDate', sql.DateTime, new Date(attendanceDate))
+    .input('TimeValue', sql.VarChar(5), timeValue)
+    .query(`
+      UPDATE dbo.[${tableName}]
+      SET [${columns[0]}] = ${timeExpression(columns[0])},
+          [${columns[1]}] = ${timeExpression(columns[1])}
+      WHERE LTRIM(RTRIM(Empcode)) = @EmpCode
+        AND CONVERT(varchar(10), AttDate, 120) = CONVERT(varchar(10), @AttendanceDate, 120);
+
+      SELECT @@ROWCOUNT AS RowsAffected;
+    `);
+
+  if (result.recordset[0]?.RowsAffected !== 1) {
+    throw new Error('Attendance record was not found for the selected date.');
   }
 }
 
