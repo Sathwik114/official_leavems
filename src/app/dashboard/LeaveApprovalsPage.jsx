@@ -35,7 +35,7 @@ export default function LeaveApprovalsPage() {
 
     const selArray = Array.from(selectedIds);
     const first = pendingApprovals.find((p) => p.Id === selArray[0]);
-    const approverId = first?.CurrentApprover || '';
+    const approverId = first?.CurrentApproverId || first?.CurrentApprover || '';
 
     try {
       const res = await fetch('/api/leave/bulk', {
@@ -73,6 +73,12 @@ export default function LeaveApprovalsPage() {
     loadData();
   }, []);
 
+  function formatApplicationDate(request) {
+    const value = request.DateApplied || request.CreatedAt || request.StartDate;
+    if (!value || Number.isNaN(new Date(value).getTime())) return '-';
+    return new Date(value).toLocaleDateString('en-GB');
+  }
+
   const renderRequestRow = (request, isPending = true, index = 0) => {
     const rowKey = request.Id ? `${request.Id}-${isPending ? 'pending' : 'approved'}-${index}` : `${isPending ? 'pending' : 'approved'}-${index}`;
 
@@ -83,7 +89,7 @@ export default function LeaveApprovalsPage() {
             <input type="checkbox" checked={selectedIds.has(request.Id)} onChange={() => toggleSelect(request.Id)} />
           </td>
         )}
-        <td>{request.CreatedAt ? new Date(request.CreatedAt).toLocaleDateString('en-GB') : '-'}</td>
+        <td>{formatApplicationDate(request)}</td>
         <td>{request.ApplicantId || '-'}</td>
         <td>{request.ApplicantName || '-'}</td>
         <td>{request.Department || '-'}</td>
@@ -117,9 +123,9 @@ export default function LeaveApprovalsPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          approverId: activeRequest.CurrentApprover,
+          approverId: activeRequest.CurrentApproverId || activeRequest.CurrentApprover,
           decision: 'APPROVED',
-          currentApprover: activeRequest.CurrentApprover,
+          currentApprover: activeRequest.CurrentApproverId || activeRequest.CurrentApprover,
           approvalFlow: activeRequest.ApprovalFlow,
         }),
       });
@@ -141,7 +147,7 @@ export default function LeaveApprovalsPage() {
       const res = await fetch('/api/leave/bulk', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids: [activeRequest.Id], approverId: activeRequest.CurrentApprover, decision: 'REJECTED', remarks: reason }),
+      body: JSON.stringify({ ids: [activeRequest.Id], approverId: activeRequest.CurrentApproverId || activeRequest.CurrentApprover, decision: 'REJECTED', remarks: reason }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Reject failed');
@@ -274,7 +280,7 @@ export default function LeaveApprovalsPage() {
                   <div className="leaveDetailCell">SL :- {activeRequest.SickLeaveBalance ?? 0}</div>
                   <div className="leaveDetailCell leaveDetailCellDate">
                     Date of Application :- <span className="leaveDetailHighlight">
-                      {activeRequest.CreatedAt ? new Date(activeRequest.CreatedAt).toLocaleDateString('en-GB') : '-'}
+                      {formatApplicationDate(activeRequest)}
                     </span>
                   </div>
                 </div>

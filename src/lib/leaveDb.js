@@ -46,6 +46,24 @@ const baseConfig = connectionStringConfig || {
 
 const poolCache = {};
 
+// Historical records do not always have LeaveRequests.ApprovedBy populated.
+// Derive it from the approval history when the summary field is empty.
+const approvedBySql = `
+  COALESCE(
+    NULLIF(lr.ApprovedBy, ''),
+    NULLIF(
+      STUFF((
+        SELECT ',' + CAST(la.ApproverId AS NVARCHAR(100))
+        FROM dbo.LeaveApprovals la
+        WHERE la.LeaveRequestId = lr.Id AND la.Decision = 'APPROVED'
+        ORDER BY la.StepNumber, la.Id
+        FOR XML PATH(''), TYPE
+      ).value('.', 'NVARCHAR(MAX)'), 1, 1, ''),
+      ''
+    )
+  )
+`;
+
 function createConfig(databaseName = DATABASE_NAME) {
   return {
     ...baseConfig,
@@ -205,6 +223,19 @@ export async function ensureLeaveTables() {
       ALTER TABLE dbo.LeaveRequests ADD RejectedAt DATETIME NULL;
     END;
 
+    -- Workflow values can contain employee IDs and comma-separated approver IDs.
+    -- Older deployments created these columns as INT, which prevents saves.
+    IF EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = 'LeaveRequests' AND COLUMN_NAME = 'ApplicantId' AND DATA_TYPE <> 'nvarchar')
+      ALTER TABLE dbo.LeaveRequests ALTER COLUMN ApplicantId NVARCHAR(100) NOT NULL;
+    IF EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = 'LeaveRequests' AND COLUMN_NAME = 'RelieverId' AND DATA_TYPE <> 'nvarchar')
+      ALTER TABLE dbo.LeaveRequests ALTER COLUMN RelieverId NVARCHAR(100) NULL;
+    IF EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = 'LeaveRequests' AND COLUMN_NAME = 'CurrentApprover' AND DATA_TYPE <> 'nvarchar')
+      ALTER TABLE dbo.LeaveRequests ALTER COLUMN CurrentApprover NVARCHAR(100) NOT NULL;
+    IF EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = 'LeaveRequests' AND COLUMN_NAME = 'ApprovedBy' AND DATA_TYPE <> 'nvarchar')
+      ALTER TABLE dbo.LeaveRequests ALTER COLUMN ApprovedBy NVARCHAR(100) NULL;
+    IF EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = 'LeaveRequests' AND COLUMN_NAME = 'RejectedBy' AND DATA_TYPE <> 'nvarchar')
+      ALTER TABLE dbo.LeaveRequests ALTER COLUMN RejectedBy NVARCHAR(100) NULL;
+
     IF OBJECT_ID(N'dbo.LeaveApprovals', N'U') IS NULL
     BEGIN
       CREATE TABLE dbo.LeaveApprovals (
@@ -217,6 +248,9 @@ export async function ensureLeaveTables() {
         CreatedAt DATETIME NOT NULL DEFAULT GETDATE()
       );
     END;
+
+    IF EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = 'LeaveApprovals' AND COLUMN_NAME = 'ApproverId' AND DATA_TYPE <> 'nvarchar')
+      ALTER TABLE dbo.LeaveApprovals ALTER COLUMN ApproverId NVARCHAR(100) NOT NULL;
   `);
 }
 
@@ -457,10 +491,11 @@ export async function getApprovedRequestsForApprover(approverId) {
         lr.AttachmentType,
         lr.ApprovalFlow,
         lr.CurrentApprover,
-        lr.ApprovedBy,
+        ${approvedBySql} AS ApprovedBy,
         lr.ApprovedAt,
         lr.Status,
         lr.CreatedAt,
+        lr.CreatedAt AS DateApplied,
         la.CreatedAt AS ApprovalCreatedAt
       FROM dbo.LeaveRequests lr
       INNER JOIN dbo.LeaveApprovals la ON la.LeaveRequestId = lr.Id
@@ -480,25 +515,26 @@ export async function getPendingApprovalsForUser(currentUserUsername) {
     .input('CurrentApprover', sql.NVarChar, String(currentUserUsername || '').trim())
     .query(`
       SELECT
-        Id,
-        ApplicantId,
-        ApplicantName,
-        LeaveType,
-        StartDate,
-        EndDate,
-        TotalDays,
-        Reason,
-        AttachmentName,
-        AttachmentType,
-        ApprovalFlow,
-        CurrentApprover,
-        Status,
-        ApprovedBy,
-        ApprovedAt,
-        CreatedAt
-      FROM dbo.LeaveRequests
-      WHERE Status = 'PENDING' AND CurrentApprover = @CurrentApprover
-      ORDER BY CreatedAt DESC;
+        lr.Id,
+        lr.ApplicantId,
+        lr.ApplicantName,
+        lr.LeaveType,
+        lr.StartDate,
+        lr.EndDate,
+        lr.TotalDays,
+        lr.Reason,
+        lr.AttachmentName,
+        lr.AttachmentType,
+        lr.ApprovalFlow,
+        lr.CurrentApprover,
+        lr.Status,
+        ${approvedBySql} AS ApprovedBy,
+        lr.ApprovedAt,
+        lr.CreatedAt,
+        lr.CreatedAt AS DateApplied
+      FROM dbo.LeaveRequests lr
+      WHERE lr.Status = 'PENDING' AND lr.CurrentApprover = @CurrentApprover
+      ORDER BY lr.CreatedAt DESC;
     `);
 
   const requests = result.recordset || [];
@@ -513,25 +549,26 @@ export async function getLeaveRequestsForApplicant(applicantId) {
     .input('ApplicantId', sql.NVarChar, String(applicantId || '').trim())
     .query(`
       SELECT
-        Id,
-        ApplicantId,
-        ApplicantName,
-        LeaveType,
-        StartDate,
-        EndDate,
-        TotalDays,
-        Reason,
-        AttachmentName,
-        AttachmentType,
-        ApprovalFlow,
-        CurrentApprover,
-        ApprovedBy,
-        ApprovedAt,
-        Status,
-        CreatedAt
-      FROM dbo.LeaveRequests
-      WHERE ApplicantId = @ApplicantId
-      ORDER BY CreatedAt DESC;
+        lr.Id,
+        lr.ApplicantId,
+        lr.ApplicantName,
+        lr.LeaveType,
+        lr.StartDate,
+        lr.EndDate,
+        lr.TotalDays,
+        lr.Reason,
+        lr.AttachmentName,
+        lr.AttachmentType,
+        lr.ApprovalFlow,
+        lr.CurrentApprover,
+        ${approvedBySql} AS ApprovedBy,
+        lr.ApprovedAt,
+        lr.Status,
+        lr.CreatedAt,
+        lr.CreatedAt AS DateApplied
+      FROM dbo.LeaveRequests lr
+      WHERE lr.ApplicantId = @ApplicantId
+      ORDER BY lr.CreatedAt DESC;
     `);
 
   const requests = result.recordset || [];
@@ -545,25 +582,26 @@ export async function getAllLeaveRequests() {
   const result = await pool.request()
     .query(`
       SELECT
-        Id,
-        ApplicantId,
-        ApplicantName,
-        LeaveType,
-        StartDate,
-        EndDate,
-        TotalDays,
-        Reason,
-        AttachmentName,
-        AttachmentType,
-        ApprovalFlow,
-        CurrentApprover,
-        ApprovedBy,
-        ApprovedAt,
-        Status,
-        CreatedAt,
-        UpdatedAt
-      FROM dbo.LeaveRequests
-      ORDER BY CreatedAt DESC;
+        lr.Id,
+        lr.ApplicantId,
+        lr.ApplicantName,
+        lr.LeaveType,
+        lr.StartDate,
+        lr.EndDate,
+        lr.TotalDays,
+        lr.Reason,
+        lr.AttachmentName,
+        lr.AttachmentType,
+        lr.ApprovalFlow,
+        lr.CurrentApprover,
+        ${approvedBySql} AS ApprovedBy,
+        lr.ApprovedAt,
+        lr.Status,
+        lr.CreatedAt,
+        lr.CreatedAt AS DateApplied,
+        lr.UpdatedAt
+      FROM dbo.LeaveRequests lr
+      ORDER BY lr.CreatedAt DESC;
     `);
 
   const requests = result.recordset || [];

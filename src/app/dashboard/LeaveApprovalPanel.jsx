@@ -78,7 +78,7 @@ export default function LeaveApprovalPanel() {
                 <button
                   type="button"
                   className="applyLeaveButton"
-                  onClick={() => handleApprove(request.Id, request.CurrentApprover, request.ApprovalFlow)}
+                  onClick={() => handleApprove(request.Id, request.CurrentApproverId || request.CurrentApprover, request.ApprovalFlow)}
                 >
                   Approve
                 </button>
