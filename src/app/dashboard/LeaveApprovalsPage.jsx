@@ -70,7 +70,11 @@ export default function LeaveApprovalsPage() {
   }
 
   useEffect(() => {
-    loadData();
+    const timer = setTimeout(() => {
+      loadData();
+    }, 0);
+
+    return () => clearTimeout(timer);
   }, []);
 
   function formatApplicationDate(request) {
@@ -97,6 +101,8 @@ export default function LeaveApprovalsPage() {
         <td>{request.Shift || '-'}</td>
         <td>{request.EmpType || '-'}</td>
         <td>{request.LeaveType}</td>
+        <td>{request.FromTime || '-'}</td>
+        <td>{request.ToTime || '-'}</td>
         <td>{request.TotalDays}</td>
         <td>{request.Reason}</td>
         <td>{request.AttachmentName || '-'}</td>
@@ -214,6 +220,8 @@ export default function LeaveApprovalsPage() {
                         <th>Shift</th>
                         <th>Employee Type</th>
                         <th>Leave Type</th>
+                        <th>From Time</th>
+                        <th>To Time</th>
                         <th>Days</th>
                         <th>Reason</th>
                         <th>Attachment</th>
@@ -252,6 +260,8 @@ export default function LeaveApprovalsPage() {
                       <th>Shift</th>
                       <th>Employee Type</th>
                       <th>Leave Type</th>
+                      <th>From Time</th>
+                      <th>To Time</th>
                       <th>Days</th>
                       <th>Reason</th>
                       <th>Attachment</th>
@@ -306,6 +316,13 @@ export default function LeaveApprovalsPage() {
                 </div>
 
                 <div className="leaveDetailRow">
+                  <div className="leaveDetailCell leaveDetailCellLabel">From Time :-</div>
+                  <div className="leaveDetailCell leaveDetailCellValue">{activeRequest.FromTime || '-'}</div>
+                  <div className="leaveDetailCell leaveDetailCellLabel">To Time :-</div>
+                  <div className="leaveDetailCell leaveDetailCellValue">{activeRequest.ToTime || '-'}</div>
+                </div>
+
+                <div className="leaveDetailRow">
                   <div className="leaveDetailCell leaveDetailCellLabel">Shift :-</div>
                   <div className="leaveDetailCell leaveDetailCellValue">{activeRequest.Shift || '-'}</div>
                   <div className="leaveDetailCell leaveDetailCellLabel">Employee Type :-</div>
@@ -353,6 +370,19 @@ export default function LeaveApprovalsPage() {
                   <div className="leaveDetailCell leaveDetailApproverStatus">
                     {approvedByList.length > 0 ? 'Approved' : ''}
                   </div>
+                </div>
+
+                <div className="leaveDetailRow">
+                  <div className="leaveDetailCell leaveDetailCellLabel">HoD Approval :-</div>
+                  <div className="leaveDetailCell leaveDetailCellValue">{activeRequest.HodApproval || '-'}</div>
+                  <div className="leaveDetailCell leaveDetailCellLabel">HoD Status :-</div>
+                  <div className="leaveDetailCell leaveDetailCellValue">{activeRequest.HodStatus || 'PENDING'}</div>
+                </div>
+                <div className="leaveDetailRow">
+                  <div className="leaveDetailCell leaveDetailCellLabel">CCC Approval :-</div>
+                  <div className="leaveDetailCell leaveDetailCellValue">{activeRequest.CccApproval || '-'}</div>
+                  <div className="leaveDetailCell leaveDetailCellLabel">CCC Status :-</div>
+                  <div className="leaveDetailCell leaveDetailCellValue">{activeRequest.CccStatus || 'PENDING'}</div>
                 </div>
               </div>
 

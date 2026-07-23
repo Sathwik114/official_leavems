@@ -84,6 +84,43 @@ export async function getAttendanceData(empcode, month, year) {
     return [];
   }
 }
+export async function getAttendanceTimesForDate(empcode, attendanceDate) {
+  const dateStr = typeof attendanceDate === 'string'
+    ? attendanceDate.slice(0, 10)
+    : new Date(attendanceDate).toISOString().slice(0, 10);
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    throw new Error('A valid attendance date is required.');
+  }
+
+  const [year, month] = dateStr.split('-');
+  const tableName = `CAP${month}${year}`;
+  const pool = await getPool();
+
+  const result = await pool.request()
+    .input('EmpCode', sql.NVarChar, String(empcode || '').trim())
+    .input('AttendanceDate', sql.VarChar(10), dateStr)
+    .query(`
+      IF OBJECT_ID(N'dbo.${tableName}', N'U') IS NULL
+      BEGIN
+        SELECT CAST(NULL AS NVARCHAR(100)) AS CapInTime,
+               CAST(NULL AS NVARCHAR(100)) AS CapOutTime
+        WHERE 1 = 0;
+      END
+      ELSE
+      BEGIN
+        SELECT TOP 1
+          CAST(InTime AS NVARCHAR(100)) AS CapInTime,
+          CAST(OutTime AS NVARCHAR(100)) AS CapOutTime
+        FROM dbo.[${tableName}]
+        WHERE LTRIM(RTRIM(Empcode)) = @EmpCode
+          AND CONVERT(varchar(10), AttDate, 120) = @AttendanceDate
+        ORDER BY AttDate;
+      END
+    `);
+
+  return result.recordset[0] || { CapInTime: null, CapOutTime: null };
+}
 
 function getCurrentAttendanceTableName() {
   const now = new Date();

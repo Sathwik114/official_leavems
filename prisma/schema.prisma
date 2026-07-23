@@ -29,6 +29,10 @@ model LeaveRequest {
   leaveType      String
   startDate      DateTime
   endDate        DateTime
+  fromTime       String?
+  toTime         String?
+  capInTime      String?
+  capOutTime     String?
   totalDays      Int
   reason         String
   relieverId     String?
@@ -37,6 +41,12 @@ model LeaveRequest {
   approvalFlow   String
   currentApprover String
   status         String           @default("PENDING")
+  hodApproval    String?
+  hodStatus      String?
+  cccApproval    String?
+  cccStatus      String?
+  hrApproval     String?
+  hrStatus       String?
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
   approvals      LeaveApproval[]

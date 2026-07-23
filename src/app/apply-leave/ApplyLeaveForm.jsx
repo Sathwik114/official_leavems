@@ -4,6 +4,23 @@ import { useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import './page.css';
 
+function getHalfDayLeaveType(leaveType, startTime, endTime, startDate, endDate) {
+  if (!startDate || startDate !== endDate) return '';
+
+  const halfDayLeaveTypes = {
+    EL: {
+      '08:30 AM-01:30 PM': 'EL/P',
+      '01:30 PM-06:00 PM': 'P/EL',
+    },
+    LWP: {
+      '08:30 AM-01:30 PM': 'LWP/P',
+      '01:30 PM-06:00 PM': 'P/LWP',
+    },
+  };
+
+  return halfDayLeaveTypes[leaveType]?.[`${startTime}-${endTime}`] || '';
+}
+
 export default function ApplyLeaveForm({ employee, currentUserUsername, approvalFlow }) {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -32,22 +49,53 @@ export default function ApplyLeaveForm({ employee, currentUserUsername, approval
 
   const today = new Date().toLocaleDateString('en-GB');
 
-  const totalDaysNum = parseInt(totalDays, 10) || 0;
+  const totalDaysNum = parseFloat(totalDays) || 0;
   const isSickLeaveOverThree = leaveType === 'SL' && totalDaysNum > 3;
   const isEsiOrMl = leaveType === 'ESI' || leaveType === 'ML';
   const requiresAttachment = isSickLeaveOverThree || isEsiOrMl;
+  const fromTime = `${startHour}:${startMin} ${startPeriod}`;
+  const toTime = `${endHour}:${endMin} ${endPeriod}`;
+  const halfDayLeaveType = getHalfDayLeaveType(leaveType, fromTime, toTime, startDate, endDate);
+  const leaveTypeForRequest = halfDayLeaveType || leaveType;
+
+  // Balances, formatted consistently as e.g. "0.00" / "1.50"
+  const availableElBalance = Number(employee?.EarnLeaveBalance ?? 0);
+  const availableSlBalance = Number(employee?.SickLeaveBalance ?? 0);
+
+  const isElRelated = leaveTypeForRequest.toUpperCase().includes('EL');
+  const isSlRelated = leaveTypeForRequest.toUpperCase().includes('SL');
+  const exceedsElBalance = isElRelated && totalDaysNum > availableElBalance;
+  const exceedsSlBalance = isSlRelated && totalDaysNum > availableSlBalance;
+  const balanceExceeded = exceedsElBalance || exceedsSlBalance;
 
   useEffect(() => {
-    if (startDate && endDate) {
+    const timer = setTimeout(() => {
+      if (startDate && endDate) {
+      const halfDayLeaveType = getHalfDayLeaveType(
+        leaveType,
+        `${startHour}:${startMin} ${startPeriod}`,
+        `${endHour}:${endMin} ${endPeriod}`,
+        startDate,
+        endDate
+      );
+
+      if (halfDayLeaveType) {
+        setTotalDays('0.5');
+        return;
+      }
+
       const start = new Date(startDate);
       const end = new Date(endDate);
       const diffTime = end.getTime() - start.getTime();
       const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
       setTotalDays(diffDays > 0 ? String(diffDays) : '0');
-    } else {
-      setTotalDays('');
-    }
-  }, [startDate, endDate]);
+      } else {
+        setTotalDays('');
+      }
+    }, 0);
+
+    return () => clearTimeout(timer);
+  }, [leaveType, startDate, endDate, startHour, startMin, startPeriod, endHour, endMin, endPeriod]);
 
   useEffect(() => {
     async function resolveFlowNames() {
@@ -122,6 +170,16 @@ export default function ApplyLeaveForm({ employee, currentUserUsername, approval
       return;
     }
 
+    if (exceedsElBalance) {
+      setSubmitError(`Insufficient EL balance. Available: ${availableElBalance.toFixed(2)}, Requested: ${totalDaysNum.toFixed(2)}.`);
+      return;
+    }
+
+    if (exceedsSlBalance) {
+      setSubmitError(`Insufficient SL balance. Available: ${availableSlBalance.toFixed(2)}, Requested: ${totalDaysNum.toFixed(2)}.`);
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -131,9 +189,11 @@ export default function ApplyLeaveForm({ employee, currentUserUsername, approval
         body: JSON.stringify({
           applicantId,
           applicantName: employee?.EmpName || '',
-          leaveType,
+          leaveType: leaveTypeForRequest,
           startDate,
           endDate,
+          fromTime,
+          toTime,
           totalDays: totalDaysNum,
           reason,
           relieverId,
@@ -175,11 +235,11 @@ export default function ApplyLeaveForm({ employee, currentUserUsername, approval
             <div className="leaveBalance">
             <span className="leaveBalanceLabel">Balance Leaves</span>
             <span className="leaveBalanceItem">
-              EL <strong>0</strong>
+              EL <strong>{availableElBalance.toFixed(2)}</strong>
             </span>
             <span className="leaveBalanceDivider" />
             <span className="leaveBalanceItem">
-              SL <strong>0</strong>
+              SL <strong>{availableSlBalance.toFixed(2)}</strong>
             </span>
           </div>
         </div>
@@ -317,6 +377,13 @@ export default function ApplyLeaveForm({ employee, currentUserUsername, approval
                 </select>
               </div>
 
+              {halfDayLeaveType && (
+                <div className="leaveField leaveFieldTiny">
+                  <label>Leave Type Flow</label>
+                  <input type="text" value={halfDayLeaveType} readOnly className="leaveReadOnly" />
+                </div>
+              )}
+
               <div className="leaveField leaveFieldGrow">
                 <label>Reason</label>
                 <input
@@ -327,6 +394,17 @@ export default function ApplyLeaveForm({ employee, currentUserUsername, approval
                 />
               </div>
             </div>
+
+            {(isElRelated || isSlRelated) && (
+              <div className="leaveFormRow">
+                <p className={balanceExceeded ? 'leaveFieldError' : 'leaveInlineValue'}>
+                  {isElRelated
+                    ? `EL balance available: ${availableElBalance.toFixed(2)} | Requested: ${totalDaysNum.toFixed(2)}`
+                    : `SL balance available: ${availableSlBalance.toFixed(2)} | Requested: ${totalDaysNum.toFixed(2)}`}
+                  {balanceExceeded && ' — insufficient balance'}
+                </p>
+              </div>
+            )}
 
             {requiresAttachment && (
               <div className="leaveFormRow leaveAttachmentRow">
@@ -383,7 +461,7 @@ export default function ApplyLeaveForm({ employee, currentUserUsername, approval
           </div>
 
           <div className="leaveFormRow leaveFormSubmitRow">
-            <button type="submit" className="leaveSubmitButton" disabled={isSubmitting || !approvalFlow}>
+            <button type="submit" className="leaveSubmitButton" disabled={isSubmitting || !approvalFlow || balanceExceeded}>
               {isSubmitting ? 'Submitting...' : 'Submit Application'}
             </button>
           </div>

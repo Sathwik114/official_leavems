@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import * as jose from 'jose';
 import { updateAttendanceTime } from '@/lib/attendanceDb';
-import { isCccOrHrUser } from '@/lib/leaveApprovalConfig';
+import { isCccUser } from '@/lib/leaveApprovalConfig';
 
 export async function POST(request) {
   try {
@@ -26,8 +26,8 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Invalid time field' }, { status: 400 });
     }
 
-    // A user can only edit their own attendance, unless they're HR/CCC
-    if (String(empcode) !== String(currentUsername) && !isCccOrHrUser(currentUsername)) {
+    // A user can only edit their own attendance, unless they're CCC.
+    if (String(empcode) !== String(currentUsername) && !isCccUser(currentUsername)) {
       return NextResponse.json({ error: 'You are not allowed to update this record' }, { status: 403 });
     }
 

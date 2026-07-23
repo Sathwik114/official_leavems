@@ -4,7 +4,7 @@ import * as jose from 'jose';
 import { getAttendance } from '@/lib/attendanceDb';
 import { ensureLeaveTables } from '@/lib/leaveDb';
 import { getEmployeeDetails } from '@/lib/payrollDb';
-import { isCccOrHrUser } from '@/lib/leaveApprovalConfig';
+import { isCccUser } from '@/lib/leaveApprovalConfig';
 import AttendanceTable from './AttendanceTable';
 
 export default async function Dashboard() {
@@ -91,7 +91,7 @@ export default async function Dashboard() {
         {attendance.length === 0 ? (
           <p>No attendance records found.</p>
         ) : (
-          <AttendanceTable attendance={attendanceWithEmployeeNames} canApplyLeave={!isCccOrHrUser(user.username)} />
+          <AttendanceTable attendance={attendanceWithEmployeeNames} canApplyLeave={!isCccUser(user.username)} />
         )}
       </div>
 

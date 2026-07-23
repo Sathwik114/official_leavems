@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { addLeaveApproval, getLeaveRequestById, updateLeaveRequestStatus } from '@/lib/leaveDb';
+import { addLeaveApproval, getLeaveRequestById, updateLeaveRequestRejection, updateLeaveRequestStatus } from '@/lib/leaveDb';
 import { getEmployeeDetails } from '@/lib/payrollDb';
 import { getUserEmail, sendMail, buildLeaveRequestEmailContent, getApprovalLink, getDirectApproveLink, getDirectRejectLink } from '@/lib/mail';
 
@@ -37,12 +37,17 @@ export async function POST(request, { params }) {
     const decisionValue = String(decision || 'APPROVED').toUpperCase();
 
     await addLeaveApproval(leaveRequestId, approvedBy, decisionValue, remarks || '', currentStep + 1);
-    await updateLeaveRequestStatus(
-      leaveRequestId,
-      nextApprover || '',
-      nextApprover ? 'PENDING' : 'APPROVED',
-      decisionValue === 'APPROVED' ? approvedBy : null
-    );
+    if (decisionValue === 'REJECTED') {
+      await updateLeaveRequestRejection(leaveRequestId, approvedBy, remarks || '', currentStep + 1);
+    } else {
+      await updateLeaveRequestStatus(
+        leaveRequestId,
+        nextApprover || '',
+        nextApprover ? 'PENDING' : 'APPROVED',
+        approvedBy,
+        currentStep + 1
+      );
+    }
 
     const approverName = (await getEmployeeDetails(approvedBy).catch(() => null))?.EmpName || approvedBy;
     const nextApproverName = nextApprover
@@ -125,7 +130,7 @@ export async function POST(request, { params }) {
     return NextResponse.json({
       success: true,
       nextApprover,
-      status: nextApprover ? 'PENDING' : 'APPROVED',
+      status: decisionValue === 'REJECTED' ? 'REJECTED' : (nextApprover ? 'PENDING' : 'APPROVED'),
     });
   } catch (error) {
     console.error('Approval update error:', error);

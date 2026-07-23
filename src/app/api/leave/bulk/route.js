@@ -31,7 +31,7 @@ export async function POST(request) {
       await addLeaveApproval(Number(id), approverId, decisionValue, remarks || '', currentStep + 1);
 
       if (decisionValue === 'APPROVED') {
-        await updateLeaveRequestStatus(Number(id), nextApprover || '', nextApprover ? 'PENDING' : 'APPROVED', approverId);
+        await updateLeaveRequestStatus(Number(id), nextApprover || '', nextApprover ? 'PENDING' : 'APPROVED', approverId, currentStep + 1);
         results.push({ id, success: true, nextApprover });
 
         const approverName = (await getEmployeeDetails(approverId).catch(() => null))?.EmpName || approverId;
@@ -99,7 +99,7 @@ export async function POST(request) {
           }
         }
       } else {
-        await updateLeaveRequestRejection(Number(id), approverId, remarks || '');
+        await updateLeaveRequestRejection(Number(id), approverId, remarks || '', currentStep + 1);
         results.push({ id, success: true, rejected: true });
 
         const approverName = (await getEmployeeDetails(approverId).catch(() => null))?.EmpName || approverId;

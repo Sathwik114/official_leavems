@@ -5,7 +5,6 @@ import LogoutButton from './LogoutButton';
 import {
   LEAVE_ROLE_RULES,
   isCccUser,
-  isHrUser,
   isApproverUser,
   isApplicantUser,
 } from '@/lib/leaveApprovalConfig';
@@ -36,16 +35,15 @@ export default async function DashboardLayout({ children }) {
   ];
 
   const isCCC = isCccUser(currentUserId);
-  const isHR = isHrUser(currentUserId);
   const isMfApplicant = mfApplicantIds.includes(currentUserId);
   const isAdmApplicant = admApplicantIds.includes(currentUserId);
   const isVipApplicant = vipApplicantIds.includes(currentUserId);
   const isApprover = isApproverUser(currentUserId);
   const isRoleUser = isApplicantUser(currentUserId) || isApprover;
 
-  const showDashboardLink = !isCCC && !isHR;
-  const showApproveLink = isCCC || isHR || isApprover || isVipApplicant;
-  const showMyLeavesLink = !isCCC && !isHR && (isMfApplicant || isAdmApplicant || isVipApplicant || isApprover);
+  const showDashboardLink = !isCCC;
+  const showApproveLink = isCCC || isApprover || isVipApplicant;
+  const showMyLeavesLink = !isCCC && (isMfApplicant || isAdmApplicant || isVipApplicant || isApprover);
 
   return (
     <div className="dashboardShell">

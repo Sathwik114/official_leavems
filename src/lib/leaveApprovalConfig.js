@@ -1,19 +1,18 @@
 export const LEAVE_ROLE_RULES = {
   mf: {
     ids: ['101024', '101027', '101049', '150121', '180272', '260296'],
-    approverIds: ['250479', '140287', '230022'],
+    approverIds: ['250479', '140287'],
   },
   adm: {
     ids: ['120124', '120137', '111254'],
-    approverIds: ['230022', '140287', '230022'],
+    approverIds: ['230022', '140287'],
   },
   vip: {
     ids: ['111137', '210237', '111069', '100209'],
-    approverIds: ['140287', '230022'],
+    approverIds: ['140287'],
   },
   special: {
     ccc: '140287',
-    hr: '230022',
   },
 };
 
@@ -23,24 +22,12 @@ export function getCccUserId() {
   return normalizeId(LEAVE_ROLE_RULES.special?.ccc);
 }
 
-export function getHrUserId() {
-  return normalizeId(LEAVE_ROLE_RULES.special?.hr);
-}
-
 export function isCccUser(userId) {
   return normalizeId(userId) === getCccUserId();
 }
 
-export function isHrUser(userId) {
-  return normalizeId(userId) === getHrUserId();
-}
-
-export function isCccOrHrUser(userId) {
-  return isCccUser(userId) || isHrUser(userId);
-}
-
 export function getDashboardRedirectForUser(userId) {
-  return isCccOrHrUser(userId) ? '/dashboard/leave-approvals' : '/dashboard';
+  return isCccUser(userId) ? '/dashboard/leave-approvals' : '/dashboard';
 }
 
 export function getAllApplicantIds() {
@@ -86,15 +73,12 @@ export function getLeaveApprovalFlow(applicantId, currentUserUsername = '') {
     return buildApprovalFlow('mf', [
       '250479',
       getCccUserId(),
-      getHrUserId(),
     ]);
   }
 
   if (LEAVE_ROLE_RULES.adm.ids.map(normalizeId).includes(normalizedApplicantId)) {
     return buildApprovalFlow('adm', [
-      getHrUserId(),
       getCccUserId(),
-      getHrUserId(),
     ]);
   }
 
@@ -108,7 +92,7 @@ export function getLeaveApprovalFlow(applicantId, currentUserUsername = '') {
 
     return {
       role: 'vip',
-      flow: [selfApprover, getCccUserId(), getHrUserId()],
+      flow: [selfApprover, getCccUserId()],
       initialApprover: selfApprover,
     };
   }
@@ -117,7 +101,7 @@ export function getLeaveApprovalFlow(applicantId, currentUserUsername = '') {
 }
 
 export function canApplyLeave(currentUserUsername = '', applicantId = '') {
-  if (isCccOrHrUser(currentUserUsername)) {
+  if (isCccUser(currentUserUsername)) {
     return false;
   }
 

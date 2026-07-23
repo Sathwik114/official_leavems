@@ -88,6 +88,8 @@ export default function MyLeavesPage() {
                   <th>Shift</th>
                   <th>Employee Type</th>
                   <th>Leave Type</th>
+                  <th>From Time</th>
+                  <th>To Time</th>
                   <th>Reason</th>
                   <th>Status</th>
                   <th>Attachment</th>
@@ -107,6 +109,8 @@ export default function MyLeavesPage() {
                     <td>{request.Shift || '-'}</td>
                     <td>{request.EmpType || '-'}</td>
                     <td>{request.LeaveType}</td>
+                    <td>{request.FromTime || '-'}</td>
+                    <td>{request.ToTime || '-'}</td>
                     <td title={request.Reason || ''}>{truncateReason(request.Reason)}</td>
                     <td>{request.Status}</td>
                     <td>{request.AttachmentName || '-'}</td>

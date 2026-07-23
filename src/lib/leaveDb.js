@@ -1,5 +1,6 @@
 import sql from 'mssql';
-import { getEmployeeDetails as getPayrollEmployeeDetails } from './payrollDb';
+import { getEmployeeDetails as getPayrollEmployeeDetails, deductLeaveBalance, refundLeaveBalance } from './payrollDb';
+import { getAttendanceTimesForDate } from './attendanceDb';
 
 function parseSqlServerConnectionString(connectionString) {
   if (!connectionString) return null;
@@ -63,6 +64,15 @@ const approvedBySql = `
     )
   )
 `;
+
+// Maps a submitted leave type (including half-day variants like 'EL/P', 'P/EL')
+// to whether it draws against EL or SL balance. LWP/COFF/OD/etc. return null.
+function resolveBalanceKind(leaveType) {
+  const normalized = String(leaveType || '').toUpperCase();
+  if (normalized.includes('EL')) return 'EL';
+  if (normalized.includes('SL')) return 'SL';
+  return null;
+}
 
 function createConfig(databaseName = DATABASE_NAME) {
   return {
@@ -177,7 +187,11 @@ export async function ensureLeaveTables() {
         LeaveType NVARCHAR(100) NOT NULL,
         StartDate DATETIME NOT NULL,
         EndDate DATETIME NOT NULL,
-        TotalDays INT NOT NULL,
+        FromTime NVARCHAR(20) NULL,
+        ToTime NVARCHAR(20) NULL,
+        CAPINTIME NVARCHAR(100) NULL,
+        CAPOUTTIME NVARCHAR(100) NULL,
+        TotalDays DECIMAL(5,2) NOT NULL,
         Reason NVARCHAR(MAX) NOT NULL,
         RelieverId NVARCHAR(100) NULL,
         RelieverName NVARCHAR(200) NULL,
@@ -188,6 +202,12 @@ export async function ensureLeaveTables() {
         CurrentApprover NVARCHAR(100) NOT NULL,
         ApprovedBy NVARCHAR(100) NULL,
         ApprovedAt DATETIME NULL,
+        HodApproval NVARCHAR(100) NULL,
+        HodStatus NVARCHAR(50) NULL,
+        CccApproval NVARCHAR(100) NULL,
+        CccStatus NVARCHAR(50) NULL,
+        HrApproval NVARCHAR(100) NULL,
+        HrStatus NVARCHAR(50) NULL,
         Status NVARCHAR(50) NOT NULL DEFAULT 'PENDING',
         CreatedAt DATETIME NOT NULL DEFAULT GETDATE(),
         UpdatedAt DATETIME NOT NULL DEFAULT GETDATE()
@@ -203,6 +223,27 @@ export async function ensureLeaveTables() {
     BEGIN
       ALTER TABLE dbo.LeaveRequests ADD ApprovedAt DATETIME NULL;
     END;
+
+    IF COL_LENGTH('dbo.LeaveRequests', 'FromTime') IS NULL
+      ALTER TABLE dbo.LeaveRequests ADD FromTime NVARCHAR(20) NULL;
+    IF COL_LENGTH('dbo.LeaveRequests', 'ToTime') IS NULL
+      ALTER TABLE dbo.LeaveRequests ADD ToTime NVARCHAR(20) NULL;
+    IF COL_LENGTH('dbo.LeaveRequests', 'CAPINTIME') IS NULL
+      ALTER TABLE dbo.LeaveRequests ADD CAPINTIME NVARCHAR(100) NULL;
+    IF COL_LENGTH('dbo.LeaveRequests', 'CAPOUTTIME') IS NULL
+      ALTER TABLE dbo.LeaveRequests ADD CAPOUTTIME NVARCHAR(100) NULL;
+    IF COL_LENGTH('dbo.LeaveRequests', 'HodApproval') IS NULL
+      ALTER TABLE dbo.LeaveRequests ADD HodApproval NVARCHAR(100) NULL;
+    IF COL_LENGTH('dbo.LeaveRequests', 'HodStatus') IS NULL
+      ALTER TABLE dbo.LeaveRequests ADD HodStatus NVARCHAR(50) NULL;
+    IF COL_LENGTH('dbo.LeaveRequests', 'CccApproval') IS NULL
+      ALTER TABLE dbo.LeaveRequests ADD CccApproval NVARCHAR(100) NULL;
+    IF COL_LENGTH('dbo.LeaveRequests', 'CccStatus') IS NULL
+      ALTER TABLE dbo.LeaveRequests ADD CccStatus NVARCHAR(50) NULL;
+    IF COL_LENGTH('dbo.LeaveRequests', 'HrApproval') IS NULL
+      ALTER TABLE dbo.LeaveRequests ADD HrApproval NVARCHAR(100) NULL;
+    IF COL_LENGTH('dbo.LeaveRequests', 'HrStatus') IS NULL
+      ALTER TABLE dbo.LeaveRequests ADD HrStatus NVARCHAR(50) NULL;
 
     IF COL_LENGTH('dbo.LeaveRequests', 'AttachmentName') IS NULL
     BEGIN
@@ -237,6 +278,11 @@ export async function ensureLeaveTables() {
       ALTER TABLE dbo.LeaveRequests ADD Shift NVARCHAR(100) NULL;
     IF COL_LENGTH('dbo.LeaveRequests', 'EmpType') IS NULL
       ALTER TABLE dbo.LeaveRequests ADD EmpType NVARCHAR(100) NULL;
+
+    -- TotalDays must support half-days (0.5). Older deployments created it as INT,
+    -- which silently rounds/truncates half-day leave requests.
+    IF EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = 'LeaveRequests' AND COLUMN_NAME = 'TotalDays' AND DATA_TYPE <> 'decimal')
+      ALTER TABLE dbo.LeaveRequests ALTER COLUMN TotalDays DECIMAL(5,2) NOT NULL;
 
     -- Workflow values can contain employee IDs and comma-separated approver IDs.
     -- Older deployments created these columns as INT, which prevents saves.
@@ -274,6 +320,28 @@ export async function createLeaveRequest(payload) {
   const pool = await getPool();
   const payrollEmployee = await getPayrollEmployeeDetails(payload.applicantId).catch(() => null);
 
+  // Only pull CAP In/Out time from AttmSystem when the leave type is COFF
+  const attendanceTimes = payload.leaveType === 'COFF'
+    ? await getAttendanceTimesForDate(payload.applicantId, payload.startDate).catch(() => ({ CapInTime: null, CapOutTime: null }))
+    : { CapInTime: null, CapOutTime: null };
+
+  const requestedDays = Number(payload.totalDays || 1);
+  const balanceKind = resolveBalanceKind(payload.leaveType);
+
+  if (balanceKind === 'EL') {
+    const availableEl = Number(payrollEmployee?.EarnLeaveBalance ?? 0);
+    if (requestedDays > availableEl) {
+      throw new Error(`Insufficient EL balance. Available: ${availableEl.toFixed(2)}, Requested: ${requestedDays.toFixed(2)}.`);
+    }
+  }
+
+  if (balanceKind === 'SL') {
+    const availableSl = Number(payrollEmployee?.SickLeaveBalance ?? 0);
+    if (requestedDays > availableSl) {
+      throw new Error(`Insufficient SL balance. Available: ${availableSl.toFixed(2)}, Requested: ${requestedDays.toFixed(2)}.`);
+    }
+  }
+
   const result = await pool.request()
     .input('ApplicantId', sql.NVarChar, String(payload.applicantId || '').trim())
     .input('ApplicantName', sql.NVarChar, payload.applicantName || '')
@@ -284,7 +352,11 @@ export async function createLeaveRequest(payload) {
     .input('LeaveType', sql.NVarChar, payload.leaveType || 'EL')
     .input('StartDate', sql.DateTime, payload.startDate)
     .input('EndDate', sql.DateTime, payload.endDate)
-    .input('TotalDays', sql.Int, Number(payload.totalDays || 1))
+    .input('FromTime', sql.NVarChar, payload.fromTime || null)
+    .input('ToTime', sql.NVarChar, payload.toTime || null)
+    .input('CapInTime', sql.NVarChar, attendanceTimes.CapInTime || null)
+    .input('CapOutTime', sql.NVarChar, attendanceTimes.CapOutTime || null)
+    .input('TotalDays', sql.Decimal(5, 2), requestedDays)
     .input('Reason', sql.NVarChar, payload.reason || '')
     .input('RelieverId', sql.NVarChar, payload.relieverId || null)
     .input('RelieverName', sql.NVarChar, payload.relieverName || null)
@@ -304,6 +376,10 @@ export async function createLeaveRequest(payload) {
         LeaveType,
         StartDate,
         EndDate,
+        FromTime,
+        ToTime,
+        CAPINTIME,
+        CAPOUTTIME,
         TotalDays,
         Reason,
         RelieverId,
@@ -327,6 +403,10 @@ export async function createLeaveRequest(payload) {
         @LeaveType,
         @StartDate,
         @EndDate,
+        @FromTime,
+        @ToTime,
+        @CapInTime,
+        @CapOutTime,
         @TotalDays,
         @Reason,
         @RelieverId,
@@ -341,6 +421,10 @@ export async function createLeaveRequest(payload) {
       );
     `);
 
+  await deductLeaveBalance(payload.applicantId, payload.leaveType, requestedDays).catch((err) => {
+    console.error('Failed to deduct leave balance for', payload.applicantId, payload.leaveType, ':', err.message);
+  });
+
   // return the full inserted row for easier debugging
   return result.recordset[0] || null;
 }
@@ -349,6 +433,29 @@ export async function createLeaveRequestWithInitialApproval(payload, approverId)
   await ensureLeaveTables();
   const pool = await getPool();
   const payrollEmployee = await getPayrollEmployeeDetails(payload.applicantId).catch(() => null);
+
+  // Only pull CAP In/Out time from AttmSystem when the leave type is COFF
+  const attendanceTimes = payload.leaveType === 'COFF'
+    ? await getAttendanceTimesForDate(payload.applicantId, payload.startDate).catch(() => ({ CapInTime: null, CapOutTime: null }))
+    : { CapInTime: null, CapOutTime: null };
+
+  const requestedDays = Number(payload.totalDays || 1);
+  const balanceKind = resolveBalanceKind(payload.leaveType);
+
+  if (balanceKind === 'EL') {
+    const availableEl = Number(payrollEmployee?.EarnLeaveBalance ?? 0);
+    if (requestedDays > availableEl) {
+      throw new Error(`Insufficient EL balance. Available: ${availableEl.toFixed(2)}, Requested: ${requestedDays.toFixed(2)}.`);
+    }
+  }
+
+  if (balanceKind === 'SL') {
+    const availableSl = Number(payrollEmployee?.SickLeaveBalance ?? 0);
+    if (requestedDays > availableSl) {
+      throw new Error(`Insufficient SL balance. Available: ${availableSl.toFixed(2)}, Requested: ${requestedDays.toFixed(2)}.`);
+    }
+  }
+
   const transaction = new sql.Transaction(pool);
 
   await transaction.begin();
@@ -364,7 +471,11 @@ export async function createLeaveRequestWithInitialApproval(payload, approverId)
       .input('LeaveType', sql.NVarChar, payload.leaveType || 'EL')
       .input('StartDate', sql.DateTime, payload.startDate)
       .input('EndDate', sql.DateTime, payload.endDate)
-      .input('TotalDays', sql.Int, Number(payload.totalDays || 1))
+      .input('FromTime', sql.NVarChar, payload.fromTime || null)
+      .input('ToTime', sql.NVarChar, payload.toTime || null)
+      .input('CapInTime', sql.NVarChar, attendanceTimes.CapInTime || null)
+      .input('CapOutTime', sql.NVarChar, attendanceTimes.CapOutTime || null)
+      .input('TotalDays', sql.Decimal(5, 2), requestedDays)
       .input('Reason', sql.NVarChar(sql.MAX), payload.reason || '')
       .input('RelieverId', sql.NVarChar, payload.relieverId || null)
       .input('RelieverName', sql.NVarChar, payload.relieverName || null)
@@ -375,13 +486,13 @@ export async function createLeaveRequestWithInitialApproval(payload, approverId)
       .input('CurrentApprover', sql.NVarChar, payload.currentApprover || '')
       .query(`
         INSERT INTO dbo.LeaveRequests (
-          ApplicantId, ApplicantName, Department, Section, Shift, EmpType, LeaveType, StartDate, EndDate, TotalDays,
+          ApplicantId, ApplicantName, Department, Section, Shift, EmpType, LeaveType, StartDate, EndDate, FromTime, ToTime, CAPINTIME, CAPOUTTIME, TotalDays,
           Reason, RelieverId, RelieverName, ContactNumber, AttachmentName,
           AttachmentType, ApprovalFlow, CurrentApprover, Status, UpdatedAt
         )
         OUTPUT INSERTED.*
         VALUES (
-          @ApplicantId, @ApplicantName, @Department, @Section, @Shift, @EmpType, @LeaveType, @StartDate, @EndDate, @TotalDays,
+          @ApplicantId, @ApplicantName, @Department, @Section, @Shift, @EmpType, @LeaveType, @StartDate, @EndDate, @FromTime, @ToTime, @CapInTime, @CapOutTime, @TotalDays,
           @Reason, @RelieverId, @RelieverName, @ContactNumber, @AttachmentName,
           @AttachmentType, @ApprovalFlow, @CurrentApprover, 'PENDING', GETDATE()
         );
@@ -404,6 +515,11 @@ export async function createLeaveRequestWithInitialApproval(payload, approverId)
       `);
 
     await transaction.commit();
+
+    await deductLeaveBalance(payload.applicantId, payload.leaveType, requestedDays).catch((err) => {
+      console.error('Failed to deduct leave balance for', payload.applicantId, payload.leaveType, ':', err.message);
+    });
+
     return savedLeaveRequest;
   } catch (error) {
     await transaction.rollback();
@@ -426,7 +542,7 @@ export async function addLeaveApproval(leaveRequestId, approverId, decision, rem
     `);
 }
 
-export async function updateLeaveRequestStatus(leaveRequestId, currentApprover, status, approvedBy = null) {
+export async function updateLeaveRequestStatus(leaveRequestId, currentApprover, status, approvedBy = null, stepNumber = 0) {
   const pool = await getPool();
 
   await pool.request()
@@ -434,6 +550,7 @@ export async function updateLeaveRequestStatus(leaveRequestId, currentApprover, 
     .input('CurrentApprover', sql.NVarChar, currentApprover || '')
     .input('Status', sql.NVarChar, status || 'PENDING')
     .input('ApprovedBy', sql.NVarChar, approvedBy || null)
+    .input('StepNumber', sql.Int, stepNumber)
     .query(`
       UPDATE dbo.LeaveRequests
       SET CurrentApprover = @CurrentApprover,
@@ -444,28 +561,47 @@ export async function updateLeaveRequestStatus(leaveRequestId, currentApprover, 
             ELSE ApprovedBy
           END,
           ApprovedAt = CASE WHEN @ApprovedBy IS NOT NULL AND @ApprovedBy <> '' AND ApprovedAt IS NULL THEN GETDATE() ELSE ApprovedAt END,
+          HodApproval = CASE WHEN @StepNumber = 1 AND @ApprovedBy IS NOT NULL AND @ApprovedBy <> '' THEN @ApprovedBy ELSE HodApproval END,
+          HodStatus = CASE WHEN @StepNumber = 1 AND @ApprovedBy IS NOT NULL AND @ApprovedBy <> '' THEN 'ACCEPTED' ELSE HodStatus END,
+          CccApproval = CASE WHEN @StepNumber = 2 AND @ApprovedBy IS NOT NULL AND @ApprovedBy <> '' THEN @ApprovedBy ELSE CccApproval END,
+          CccStatus = CASE WHEN @StepNumber = 2 AND @ApprovedBy IS NOT NULL AND @ApprovedBy <> '' THEN 'ACCEPTED' ELSE CccStatus END,
           UpdatedAt = GETDATE()
       WHERE Id = @LeaveRequestId;
     `);
 }
 
-export async function updateLeaveRequestRejection(leaveRequestId, rejectedBy, reason) {
+export async function updateLeaveRequestRejection(leaveRequestId, rejectedBy, reason, stepNumber = 0) {
   const pool = await getPool();
 
-  await pool.request()
+  const result = await pool.request()
     .input('LeaveRequestId', sql.Int, leaveRequestId)
     .input('RejectedBy', sql.NVarChar, rejectedBy || '')
     .input('RejectionReason', sql.NVarChar, reason || '')
+    .input('StepNumber', sql.Int, stepNumber)
     .query(`
       UPDATE dbo.LeaveRequests
       SET RejectedBy = @RejectedBy,
           RejectionReason = @RejectionReason,
           RejectedAt = CASE WHEN RejectedAt IS NULL THEN GETDATE() ELSE RejectedAt END,
+          HodApproval = CASE WHEN @StepNumber = 1 THEN @RejectedBy ELSE HodApproval END,
+          HodStatus = CASE WHEN @StepNumber = 1 THEN 'REJECTED' ELSE HodStatus END,
+          CccApproval = CASE WHEN @StepNumber = 2 THEN @RejectedBy ELSE CccApproval END,
+          CccStatus = CASE WHEN @StepNumber = 2 THEN 'REJECTED' ELSE CccStatus END,
           Status = 'REJECTED',
           CurrentApprover = '',
           UpdatedAt = GETDATE()
+      OUTPUT DELETED.RejectedAt AS PreviousRejectedAt, INSERTED.ApplicantId, INSERTED.LeaveType, INSERTED.TotalDays
       WHERE Id = @LeaveRequestId;
     `);
+
+  const row = result.recordset[0];
+  const isFirstRejection = row && row.PreviousRejectedAt === null;
+
+  if (isFirstRejection) {
+    await refundLeaveBalance(row.ApplicantId, row.LeaveType, row.TotalDays).catch((err) => {
+      console.error('Failed to refund leave balance for', row.ApplicantId, row.LeaveType, ':', err.message);
+    });
+  }
 }
 
 export async function getLeaveRequestById(leaveRequestId) {
@@ -486,6 +622,8 @@ export async function getLeaveRequestById(leaveRequestId) {
         LeaveType,
         StartDate,
         EndDate,
+        FromTime,
+        ToTime,
         TotalDays,
         Reason,
         RelieverId,
@@ -497,6 +635,12 @@ export async function getLeaveRequestById(leaveRequestId) {
         CurrentApprover,
         ApprovedBy,
         ApprovedAt,
+        HodApproval,
+        HodStatus,
+        CccApproval,
+        CccStatus,
+        HrApproval,
+        HrStatus,
         Status,
         CreatedAt,
         UpdatedAt
@@ -526,6 +670,8 @@ export async function getApprovedRequestsForApprover(approverId) {
         lr.LeaveType,
         lr.StartDate,
         lr.EndDate,
+        lr.FromTime,
+        lr.ToTime,
         lr.TotalDays,
         lr.Reason,
         lr.RelieverId,
@@ -537,6 +683,12 @@ export async function getApprovedRequestsForApprover(approverId) {
         lr.CurrentApprover,
         ${approvedBySql} AS ApprovedBy,
         lr.ApprovedAt,
+        lr.HodApproval,
+        lr.HodStatus,
+        lr.CccApproval,
+        lr.CccStatus,
+        lr.HrApproval,
+        lr.HrStatus,
         lr.Status,
         lr.CreatedAt,
         lr.CreatedAt AS DateApplied,
@@ -569,6 +721,8 @@ export async function getPendingApprovalsForUser(currentUserUsername) {
         lr.LeaveType,
         lr.StartDate,
         lr.EndDate,
+        lr.FromTime,
+        lr.ToTime,
         lr.TotalDays,
         lr.Reason,
         lr.RelieverId,
@@ -581,6 +735,12 @@ export async function getPendingApprovalsForUser(currentUserUsername) {
         lr.Status,
         ${approvedBySql} AS ApprovedBy,
         lr.ApprovedAt,
+        lr.HodApproval,
+        lr.HodStatus,
+        lr.CccApproval,
+        lr.CccStatus,
+        lr.HrApproval,
+        lr.HrStatus,
         lr.CreatedAt,
         lr.CreatedAt AS DateApplied
       FROM dbo.LeaveRequests lr
@@ -610,6 +770,8 @@ export async function getLeaveRequestsForApplicant(applicantId) {
         lr.LeaveType,
         lr.StartDate,
         lr.EndDate,
+        lr.FromTime,
+        lr.ToTime,
         lr.TotalDays,
         lr.Reason,
         lr.RelieverId,
@@ -621,6 +783,12 @@ export async function getLeaveRequestsForApplicant(applicantId) {
         lr.CurrentApprover,
         ${approvedBySql} AS ApprovedBy,
         lr.ApprovedAt,
+        lr.HodApproval,
+        lr.HodStatus,
+        lr.CccApproval,
+        lr.CccStatus,
+        lr.HrApproval,
+        lr.HrStatus,
         lr.Status,
         lr.CreatedAt,
         lr.CreatedAt AS DateApplied
@@ -650,6 +818,8 @@ export async function getAllLeaveRequests() {
         lr.LeaveType,
         lr.StartDate,
         lr.EndDate,
+        lr.FromTime,
+        lr.ToTime,
         lr.TotalDays,
         lr.Reason,
         lr.RelieverId,
@@ -661,6 +831,12 @@ export async function getAllLeaveRequests() {
         lr.CurrentApprover,
         ${approvedBySql} AS ApprovedBy,
         lr.ApprovedAt,
+        lr.HodApproval,
+        lr.HodStatus,
+        lr.CccApproval,
+        lr.CccStatus,
+        lr.HrApproval,
+        lr.HrStatus,
         lr.Status,
         lr.CreatedAt,
         lr.CreatedAt AS DateApplied,

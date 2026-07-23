@@ -91,7 +91,8 @@ export async function GET(request) {
       leaveRequestId,
       nextApprover || '',
       nextApprover ? 'PENDING' : 'APPROVED',
-      targetApproverId
+      targetApproverId,
+      currentStep + 1
     );
 
     // Fetch display names and details for email
@@ -204,7 +205,7 @@ export async function POST(request) {
     }
 
     await addLeaveApproval(leaveRequestId, targetApproverId, 'REJECTED', rejectionReason, currentStep + 1);
-    await updateLeaveRequestRejection(leaveRequestId, targetApproverId, rejectionReason);
+    await updateLeaveRequestRejection(leaveRequestId, targetApproverId, rejectionReason, currentStep + 1);
 
     const approverName = (await getEmployeeDetails(targetApproverId).catch(() => null))?.EmpName || targetApproverId;
     const applicantEmployee = await getEmployeeDetails(leaveRequest.ApplicantId);
