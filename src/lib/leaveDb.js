@@ -1,5 +1,5 @@
 import sql from 'mssql';
-import { getEmployeeDetails as getPayrollEmployeeDetails, deductLeaveBalance, refundLeaveBalance } from './payrollDb';
+import { getEmployeeDetails as getPayrollEmployeeDetails, deductLeaveBalance} from './payrollDb';
 import { getAttendanceTimesForDate } from './attendanceDb';
 
 function parseSqlServerConnectionString(connectionString) {
@@ -421,11 +421,8 @@ export async function createLeaveRequest(payload) {
       );
     `);
 
-  await deductLeaveBalance(payload.applicantId, payload.leaveType, requestedDays).catch((err) => {
-    console.error('Failed to deduct leave balance for', payload.applicantId, payload.leaveType, ':', err.message);
-  });
-
-  // return the full inserted row for easier debugging
+  // Balance is NOT deducted here — it's deducted only when the request is
+  // fully approved (see updateLeaveRequestStatus).
   return result.recordset[0] || null;
 }
 
@@ -516,10 +513,8 @@ export async function createLeaveRequestWithInitialApproval(payload, approverId)
 
     await transaction.commit();
 
-    await deductLeaveBalance(payload.applicantId, payload.leaveType, requestedDays).catch((err) => {
-      console.error('Failed to deduct leave balance for', payload.applicantId, payload.leaveType, ':', err.message);
-    });
-
+    // Balance is NOT deducted here — it's deducted only when the request is
+    // fully approved (see updateLeaveRequestStatus).
     return savedLeaveRequest;
   } catch (error) {
     await transaction.rollback();
@@ -545,7 +540,7 @@ export async function addLeaveApproval(leaveRequestId, approverId, decision, rem
 export async function updateLeaveRequestStatus(leaveRequestId, currentApprover, status, approvedBy = null, stepNumber = 0) {
   const pool = await getPool();
 
-  await pool.request()
+  const result = await pool.request()
     .input('LeaveRequestId', sql.Int, leaveRequestId)
     .input('CurrentApprover', sql.NVarChar, currentApprover || '')
     .input('Status', sql.NVarChar, status || 'PENDING')
@@ -566,14 +561,26 @@ export async function updateLeaveRequestStatus(leaveRequestId, currentApprover, 
           CccApproval = CASE WHEN @StepNumber = 2 AND @ApprovedBy IS NOT NULL AND @ApprovedBy <> '' THEN @ApprovedBy ELSE CccApproval END,
           CccStatus = CASE WHEN @StepNumber = 2 AND @ApprovedBy IS NOT NULL AND @ApprovedBy <> '' THEN 'ACCEPTED' ELSE CccStatus END,
           UpdatedAt = GETDATE()
+      OUTPUT DELETED.Status AS PreviousStatus, INSERTED.ApplicantId, INSERTED.LeaveType, INSERTED.TotalDays
       WHERE Id = @LeaveRequestId;
     `);
+
+  const row = result.recordset[0];
+  const justBecameApproved = row && row.PreviousStatus !== 'APPROVED' && status === 'APPROVED';
+
+  if (justBecameApproved) {
+    const updatedBalance = await deductLeaveBalance(row.ApplicantId, row.LeaveType, row.TotalDays).catch((err) => {
+      console.error('Failed to deduct leave balance for', row.ApplicantId, row.LeaveType, ':', err.message);
+      return null;
+    });
+    console.log('[updateLeaveRequestStatus] Balance deducted on final approval:', { applicantId: row.ApplicantId, leaveType: row.LeaveType, totalDays: row.TotalDays, updatedBalance });
+  }
 }
 
 export async function updateLeaveRequestRejection(leaveRequestId, rejectedBy, reason, stepNumber = 0) {
   const pool = await getPool();
 
-  const result = await pool.request()
+  await pool.request()
     .input('LeaveRequestId', sql.Int, leaveRequestId)
     .input('RejectedBy', sql.NVarChar, rejectedBy || '')
     .input('RejectionReason', sql.NVarChar, reason || '')
@@ -590,18 +597,8 @@ export async function updateLeaveRequestRejection(leaveRequestId, rejectedBy, re
           Status = 'REJECTED',
           CurrentApprover = '',
           UpdatedAt = GETDATE()
-      OUTPUT DELETED.RejectedAt AS PreviousRejectedAt, INSERTED.ApplicantId, INSERTED.LeaveType, INSERTED.TotalDays
       WHERE Id = @LeaveRequestId;
     `);
-
-  const row = result.recordset[0];
-  const isFirstRejection = row && row.PreviousRejectedAt === null;
-
-  if (isFirstRejection) {
-    await refundLeaveBalance(row.ApplicantId, row.LeaveType, row.TotalDays).catch((err) => {
-      console.error('Failed to refund leave balance for', row.ApplicantId, row.LeaveType, ':', err.message);
-    });
-  }
 }
 
 export async function getLeaveRequestById(leaveRequestId) {
