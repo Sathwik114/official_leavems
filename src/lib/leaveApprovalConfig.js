@@ -8,7 +8,7 @@ export const LEAVE_ROLE_RULES = {
     approverIds: ['230022', '140287'],
   },
   vip: {
-    ids: ['111137', '210237', '111069', '100209'],
+    ids: ['250479','111137', '210237', '111069', '100209'],
     approverIds: ['140287'],
   },
   special: {
@@ -65,9 +65,8 @@ function buildApprovalFlow(role, fallbackApprovers = []) {
   };
 }
 
-export function getLeaveApprovalFlow(applicantId, currentUserUsername = '') {
+export function getLeaveApprovalFlow(applicantId) {
   const normalizedApplicantId = normalizeId(applicantId);
-  const normalizedUserId = normalizeId(currentUserUsername);
 
   if (LEAVE_ROLE_RULES.mf.ids.map(normalizeId).includes(normalizedApplicantId)) {
     return buildApprovalFlow('mf', [
@@ -82,18 +81,13 @@ export function getLeaveApprovalFlow(applicantId, currentUserUsername = '') {
     ]);
   }
 
-  if (
-    LEAVE_ROLE_RULES.vip.ids.map(normalizeId).includes(normalizedApplicantId) ||
-    LEAVE_ROLE_RULES.vip.ids.map(normalizeId).includes(normalizedUserId)
-  ) {
-    const selfApprover = LEAVE_ROLE_RULES.vip.ids.map(normalizeId).includes(normalizedUserId)
-      ? normalizedUserId
-      : normalizedApplicantId;
+  if (LEAVE_ROLE_RULES.vip.ids.map(normalizeId).includes(normalizedApplicantId)) {
+    const vipApproverIds = (LEAVE_ROLE_RULES.vip.approverIds || []).map(normalizeId);
 
     return {
       role: 'vip',
-      flow: [selfApprover, getCccUserId()],
-      initialApprover: selfApprover,
+      flow: [normalizedApplicantId, ...vipApproverIds],
+      initialApprover: normalizedApplicantId,
     };
   }
 

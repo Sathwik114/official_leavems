@@ -122,6 +122,45 @@ export async function getAttendanceTimesForDate(empcode, attendanceDate) {
   return result.recordset[0] || { CapInTime: null, CapOutTime: null };
 }
 
+export async function getMorningLateByForDate(empcode, attendanceDate) {
+  const dateStr = typeof attendanceDate === 'string'
+    ? attendanceDate.slice(0, 10)
+    : new Date(attendanceDate).toISOString().slice(0, 10);
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    throw new Error('A valid attendance date is required.');
+  }
+
+  const [year, month] = dateStr.split('-');
+  const tableName = `CAP${month}${year}`;
+  const pool = await getPool();
+
+  const result = await pool.request()
+    .input('EmpCode', sql.NVarChar, String(empcode || '').trim())
+    .input('AttendanceDate', sql.VarChar(10), dateStr)
+    .query(`
+      IF OBJECT_ID(N'dbo.${tableName}', N'U') IS NULL
+      BEGIN
+        SELECT CAST(NULL AS DECIMAL(18, 3)) AS MorningLateBy
+        WHERE 1 = 0;
+      END
+      ELSE
+      BEGIN
+        SELECT TOP 1 MorningLateBy, EveningEarlyGoBy
+        FROM dbo.[${tableName}]
+        WHERE LTRIM(RTRIM(Empcode)) = @EmpCode
+          AND CONVERT(varchar(10), AttDate, 120) = @AttendanceDate
+        ORDER BY AttDate;
+      END
+    `);
+
+  const row = result.recordset[0];
+  if (!row) return null;
+
+  const maxValue = Math.max(Number(row.MorningLateBy) || 0, Number(row.EveningEarlyGoBy) || 0);
+  return maxValue > 5 && maxValue <= 60 ? maxValue : null;
+}
+
 function getCurrentAttendanceTableName() {
   const now = new Date();
   return `CAP${String(now.getMonth() + 1).padStart(2, '0')}${now.getFullYear()}`;

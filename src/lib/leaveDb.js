@@ -1,6 +1,6 @@
 import sql from 'mssql';
 import { getEmployeeDetails as getPayrollEmployeeDetails, deductLeaveBalance} from './payrollDb';
-import { getAttendanceTimesForDate } from './attendanceDb';
+import { getAttendanceTimesForDate, getMorningLateByForDate } from './attendanceDb';
 
 function parseSqlServerConnectionString(connectionString) {
   if (!connectionString) return null;
@@ -72,6 +72,27 @@ function resolveBalanceKind(leaveType) {
   if (normalized.includes('EL')) return 'EL';
   if (normalized.includes('SL')) return 'SL';
   return null;
+}
+
+// TranId = ApplicantId + DDMMYYYY of submission date, stored as BIGINT.
+// e.g. applicantId '260296' submitted on 09-07-2026 -> 26029609072026
+function generateTranId(applicantId) {
+  const now = new Date();
+  const day = String(now.getDate()).padStart(2, '0');
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const year = String(now.getFullYear());
+  const cleanApplicantId = String(applicantId || '').trim();
+  return `${cleanApplicantId}${day}${month}${year}`;
+}
+
+// Builds a Date that, after the mssql driver converts it to UTC internally,
+// lands back on the correct local wall-clock time in SQL Server's DATETIME
+// column (which has no timezone of its own) — truncated to HH:MM:00.
+function nowAsLocalDateTimeTruncated() {
+  const now = new Date();
+  const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
+  local.setSeconds(0, 0);
+  return local;
 }
 
 function createConfig(databaseName = DATABASE_NAME) {
@@ -191,6 +212,7 @@ export async function ensureLeaveTables() {
         ToTime NVARCHAR(20) NULL,
         CAPINTIME NVARCHAR(100) NULL,
         CAPOUTTIME NVARCHAR(100) NULL,
+        MorningLateBy DECIMAL(18,3) NULL,
         TotalDays DECIMAL(5,2) NOT NULL,
         Reason NVARCHAR(MAX) NOT NULL,
         RelieverId NVARCHAR(100) NULL,
@@ -204,8 +226,12 @@ export async function ensureLeaveTables() {
         ApprovedAt DATETIME NULL,
         HodApproval NVARCHAR(100) NULL,
         HodStatus NVARCHAR(50) NULL,
+        HodRejectId NVARCHAR(100) NULL,
+        HodRejectReason NVARCHAR(MAX) NULL,
         CccApproval NVARCHAR(100) NULL,
         CccStatus NVARCHAR(50) NULL,
+        CccRejectId NVARCHAR(100) NULL,
+        CccRejectReason NVARCHAR(MAX) NULL,
         HrApproval NVARCHAR(100) NULL,
         HrStatus NVARCHAR(50) NULL,
         Status NVARCHAR(50) NOT NULL DEFAULT 'PENDING',
@@ -232,14 +258,24 @@ export async function ensureLeaveTables() {
       ALTER TABLE dbo.LeaveRequests ADD CAPINTIME NVARCHAR(100) NULL;
     IF COL_LENGTH('dbo.LeaveRequests', 'CAPOUTTIME') IS NULL
       ALTER TABLE dbo.LeaveRequests ADD CAPOUTTIME NVARCHAR(100) NULL;
+    IF COL_LENGTH('dbo.LeaveRequests', 'MorningLateBy') IS NULL
+      ALTER TABLE dbo.LeaveRequests ADD MorningLateBy DECIMAL(18,3) NULL;
     IF COL_LENGTH('dbo.LeaveRequests', 'HodApproval') IS NULL
       ALTER TABLE dbo.LeaveRequests ADD HodApproval NVARCHAR(100) NULL;
     IF COL_LENGTH('dbo.LeaveRequests', 'HodStatus') IS NULL
       ALTER TABLE dbo.LeaveRequests ADD HodStatus NVARCHAR(50) NULL;
+    IF COL_LENGTH('dbo.LeaveRequests', 'HodRejectId') IS NULL
+      ALTER TABLE dbo.LeaveRequests ADD HodRejectId NVARCHAR(100) NULL;
+    IF COL_LENGTH('dbo.LeaveRequests', 'HodRejectReason') IS NULL
+      ALTER TABLE dbo.LeaveRequests ADD HodRejectReason NVARCHAR(MAX) NULL;
     IF COL_LENGTH('dbo.LeaveRequests', 'CccApproval') IS NULL
       ALTER TABLE dbo.LeaveRequests ADD CccApproval NVARCHAR(100) NULL;
     IF COL_LENGTH('dbo.LeaveRequests', 'CccStatus') IS NULL
       ALTER TABLE dbo.LeaveRequests ADD CccStatus NVARCHAR(50) NULL;
+    IF COL_LENGTH('dbo.LeaveRequests', 'CccRejectId') IS NULL
+      ALTER TABLE dbo.LeaveRequests ADD CccRejectId NVARCHAR(100) NULL;
+    IF COL_LENGTH('dbo.LeaveRequests', 'CccRejectReason') IS NULL
+      ALTER TABLE dbo.LeaveRequests ADD CccRejectReason NVARCHAR(MAX) NULL;
     IF COL_LENGTH('dbo.LeaveRequests', 'HrApproval') IS NULL
       ALTER TABLE dbo.LeaveRequests ADD HrApproval NVARCHAR(100) NULL;
     IF COL_LENGTH('dbo.LeaveRequests', 'HrStatus') IS NULL
@@ -278,6 +314,11 @@ export async function ensureLeaveTables() {
       ALTER TABLE dbo.LeaveRequests ADD Shift NVARCHAR(100) NULL;
     IF COL_LENGTH('dbo.LeaveRequests', 'EmpType') IS NULL
       ALTER TABLE dbo.LeaveRequests ADD EmpType NVARCHAR(100) NULL;
+
+    IF COL_LENGTH('dbo.LeaveRequests', 'TranId') IS NULL
+      ALTER TABLE dbo.LeaveRequests ADD TranId BIGINT NULL;
+    IF COL_LENGTH('dbo.LeaveRequests', 'TranDate') IS NULL
+      ALTER TABLE dbo.LeaveRequests ADD TranDate DATETIME NULL;
 
     -- TotalDays must support half-days (0.5). Older deployments created it as INT,
     -- which silently rounds/truncates half-day leave requests.
@@ -342,6 +383,12 @@ export async function createLeaveRequest(payload) {
     }
   }
 
+  const tranId = generateTranId(payload.applicantId);
+  const tranDate = nowAsLocalDateTimeTruncated();
+  const morningLateBy = String(payload.leaveType || '').replace(/\s/g, '').toLowerCase() === '1hour'
+    ? await getMorningLateByForDate(payload.applicantId, payload.startDate).catch(() => null)
+    : null;
+
   const result = await pool.request()
     .input('ApplicantId', sql.NVarChar, String(payload.applicantId || '').trim())
     .input('ApplicantName', sql.NVarChar, payload.applicantName || '')
@@ -365,6 +412,9 @@ export async function createLeaveRequest(payload) {
     .input('AttachmentType', sql.NVarChar, payload.attachmentType || null)
     .input('ApprovalFlow', sql.NVarChar, payload.approvalFlow || '')
     .input('CurrentApprover', sql.NVarChar, payload.currentApprover || '')
+    .input('TranId', sql.BigInt, tranId)
+    .input('TranDate', sql.DateTime, tranDate)
+    .input('MorningLateBy', sql.Decimal(18, 3), morningLateBy)
     .query(`
       INSERT INTO dbo.LeaveRequests (
         ApplicantId,
@@ -390,7 +440,10 @@ export async function createLeaveRequest(payload) {
         ApprovalFlow,
         CurrentApprover,
         Status,
-        UpdatedAt
+        UpdatedAt,
+        TranId,
+        TranDate,
+        MorningLateBy
       )
       OUTPUT INSERTED.*
       VALUES (
@@ -417,7 +470,10 @@ export async function createLeaveRequest(payload) {
         @ApprovalFlow,
         @CurrentApprover,
         'PENDING',
-        GETDATE()
+        GETDATE(),
+        @TranId,
+        @TranDate,
+        @MorningLateBy
       );
     `);
 
@@ -453,6 +509,12 @@ export async function createLeaveRequestWithInitialApproval(payload, approverId)
     }
   }
 
+  const tranId = generateTranId(payload.applicantId);
+  const tranDate = nowAsLocalDateTimeTruncated();
+  const morningLateBy = String(payload.leaveType || '').replace(/\s/g, '').toLowerCase() === '1hour'
+    ? await getMorningLateByForDate(payload.applicantId, payload.startDate).catch(() => null)
+    : null;
+
   const transaction = new sql.Transaction(pool);
 
   await transaction.begin();
@@ -481,17 +543,22 @@ export async function createLeaveRequestWithInitialApproval(payload, approverId)
       .input('AttachmentType', sql.NVarChar, payload.attachmentType || null)
       .input('ApprovalFlow', sql.NVarChar, payload.approvalFlow || '')
       .input('CurrentApprover', sql.NVarChar, payload.currentApprover || '')
+      .input('TranId', sql.BigInt, tranId)
+      .input('TranDate', sql.DateTime, tranDate)
+      .input('MorningLateBy', sql.Decimal(18, 3), morningLateBy)
       .query(`
         INSERT INTO dbo.LeaveRequests (
           ApplicantId, ApplicantName, Department, Section, Shift, EmpType, LeaveType, StartDate, EndDate, FromTime, ToTime, CAPINTIME, CAPOUTTIME, TotalDays,
           Reason, RelieverId, RelieverName, ContactNumber, AttachmentName,
-          AttachmentType, ApprovalFlow, CurrentApprover, Status, UpdatedAt
+          AttachmentType, ApprovalFlow, CurrentApprover, Status, UpdatedAt,
+          TranId, TranDate, MorningLateBy
         )
         OUTPUT INSERTED.*
         VALUES (
           @ApplicantId, @ApplicantName, @Department, @Section, @Shift, @EmpType, @LeaveType, @StartDate, @EndDate, @FromTime, @ToTime, @CapInTime, @CapOutTime, @TotalDays,
           @Reason, @RelieverId, @RelieverName, @ContactNumber, @AttachmentName,
-          @AttachmentType, @ApprovalFlow, @CurrentApprover, 'PENDING', GETDATE()
+          @AttachmentType, @ApprovalFlow, @CurrentApprover, 'PENDING', GETDATE(),
+          @TranId, @TranDate, @MorningLateBy
         );
       `);
 
@@ -557,9 +624,9 @@ export async function updateLeaveRequestStatus(leaveRequestId, currentApprover, 
           END,
           ApprovedAt = CASE WHEN @ApprovedBy IS NOT NULL AND @ApprovedBy <> '' AND ApprovedAt IS NULL THEN GETDATE() ELSE ApprovedAt END,
           HodApproval = CASE WHEN @StepNumber = 1 AND @ApprovedBy IS NOT NULL AND @ApprovedBy <> '' THEN @ApprovedBy ELSE HodApproval END,
-          HodStatus = CASE WHEN @StepNumber = 1 AND @ApprovedBy IS NOT NULL AND @ApprovedBy <> '' THEN 'ACCEPTED' ELSE HodStatus END,
+          HodStatus = CASE WHEN @StepNumber = 1 AND @ApprovedBy IS NOT NULL AND @ApprovedBy <> '' THEN 'Accept' ELSE HodStatus END,
           CccApproval = CASE WHEN @StepNumber = 2 AND @ApprovedBy IS NOT NULL AND @ApprovedBy <> '' THEN @ApprovedBy ELSE CccApproval END,
-          CccStatus = CASE WHEN @StepNumber = 2 AND @ApprovedBy IS NOT NULL AND @ApprovedBy <> '' THEN 'ACCEPTED' ELSE CccStatus END,
+          CccStatus = CASE WHEN @StepNumber = 2 AND @ApprovedBy IS NOT NULL AND @ApprovedBy <> '' THEN 'Accept' ELSE CccStatus END,
           UpdatedAt = GETDATE()
       OUTPUT DELETED.Status AS PreviousStatus, INSERTED.ApplicantId, INSERTED.LeaveType, INSERTED.TotalDays
       WHERE Id = @LeaveRequestId;
@@ -592,8 +659,12 @@ export async function updateLeaveRequestRejection(leaveRequestId, rejectedBy, re
           RejectedAt = CASE WHEN RejectedAt IS NULL THEN GETDATE() ELSE RejectedAt END,
           HodApproval = CASE WHEN @StepNumber = 1 THEN @RejectedBy ELSE HodApproval END,
           HodStatus = CASE WHEN @StepNumber = 1 THEN 'REJECTED' ELSE HodStatus END,
+          HodRejectId = CASE WHEN @StepNumber = 1 THEN @RejectedBy ELSE HodRejectId END,
+          HodRejectReason = CASE WHEN @StepNumber = 1 THEN @RejectionReason ELSE HodRejectReason END,
           CccApproval = CASE WHEN @StepNumber = 2 THEN @RejectedBy ELSE CccApproval END,
           CccStatus = CASE WHEN @StepNumber = 2 THEN 'REJECTED' ELSE CccStatus END,
+          CccRejectId = CASE WHEN @StepNumber = 2 THEN @RejectedBy ELSE CccRejectId END,
+          CccRejectReason = CASE WHEN @StepNumber = 2 THEN @RejectionReason ELSE CccRejectReason END,
           Status = 'REJECTED',
           CurrentApprover = '',
           UpdatedAt = GETDATE()
@@ -640,7 +711,9 @@ export async function getLeaveRequestById(leaveRequestId) {
         HrStatus,
         Status,
         CreatedAt,
-        UpdatedAt
+        UpdatedAt,
+        TranId,
+        TranDate
       FROM dbo.LeaveRequests
       WHERE Id = @LeaveRequestId;
     `);
@@ -689,7 +762,9 @@ export async function getApprovedRequestsForApprover(approverId) {
         lr.Status,
         lr.CreatedAt,
         lr.CreatedAt AS DateApplied,
-        la.CreatedAt AS ApprovalCreatedAt
+        la.CreatedAt AS ApprovalCreatedAt,
+        lr.TranId,
+        lr.TranDate
       FROM dbo.LeaveRequests lr
       INNER JOIN dbo.LeaveApprovals la ON la.LeaveRequestId = lr.Id
       WHERE la.ApproverId = @ApproverId AND la.Decision = 'APPROVED'
@@ -739,7 +814,9 @@ export async function getPendingApprovalsForUser(currentUserUsername) {
         lr.HrApproval,
         lr.HrStatus,
         lr.CreatedAt,
-        lr.CreatedAt AS DateApplied
+        lr.CreatedAt AS DateApplied,
+        lr.TranId,
+        lr.TranDate
       FROM dbo.LeaveRequests lr
       WHERE lr.Status = 'PENDING' AND lr.CurrentApprover = @CurrentApprover
       ORDER BY lr.CreatedAt DESC;
@@ -788,7 +865,9 @@ export async function getLeaveRequestsForApplicant(applicantId) {
         lr.HrStatus,
         lr.Status,
         lr.CreatedAt,
-        lr.CreatedAt AS DateApplied
+        lr.CreatedAt AS DateApplied,
+        lr.TranId,
+        lr.TranDate
       FROM dbo.LeaveRequests lr
       WHERE lr.ApplicantId = @ApplicantId
       ORDER BY lr.CreatedAt DESC;
@@ -837,7 +916,9 @@ export async function getAllLeaveRequests() {
         lr.Status,
         lr.CreatedAt,
         lr.CreatedAt AS DateApplied,
-        lr.UpdatedAt
+        lr.UpdatedAt,
+        lr.TranId,
+        lr.TranDate
       FROM dbo.LeaveRequests lr
       ORDER BY lr.CreatedAt DESC;
     `);

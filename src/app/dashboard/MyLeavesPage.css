@@ -13,6 +13,42 @@ html, body {
   width: 100%;
 }
 
+.dashboardBlob {
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(80px);
+  z-index: -1;
+  pointer-events: none;
+}
+
+.dashboardBlobOne {
+  width: 320px;
+  height: 320px;
+  top: -80px;
+  left: -80px;
+  background: rgba(125, 211, 252, 0.25);
+}
+
+.dashboardBlobTwo {
+  width: 320px;
+  height: 320px;
+  bottom: -80px;
+  right: -80px;
+  background: rgba(196, 181, 253, 0.25);
+}
+
+.dashboardHeader {
+  padding: 0.75rem 5px 0.25rem;
+  flex-shrink: 0;
+}
+
+.dashboardHeaderTitle {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
 .dashboardAttendance {
   flex: 1;
   overflow: hidden;
@@ -21,21 +57,23 @@ html, body {
   width: 100%;
   max-width: 100%;
   margin: 0;
-  padding: 0 5px;
+  padding: 0 5px;           /* 5px gap from screen edges, left and right */
   box-sizing: border-box;
   background: transparent;
   box-shadow: none;
   border-radius: 0;
+  min-height: 0;
 }
 
 .tableFilterBar {
   display: flex;
   align-items: center;
   gap: 0.6rem;
-  padding: 0.75rem 0.5rem;
+  padding: 0.75rem 0;
   font-size: 13.5px;
   font-weight: 600;
   color: #334155;
+  flex-shrink: 0;
 }
 
 .tableFilterBar input[type="date"] {
@@ -71,14 +109,16 @@ html, body {
   width: 100%;
   flex: 1;
   overflow-y: auto;
-  overflow-x: hidden;            /* back to hidden — no horizontal scroll */
+  overflow-x: auto;
   max-height: calc(10 * 44px + 44px);
-  background: #ffffff;
-  border: 1px solid #d9dee5;
+  background: transparent;   /* no white container box */
+  border: none;               /* no boxed border around the table */
+  min-height: 0;
 }
 
 .tableScrollWrapper::-webkit-scrollbar {
   width: 8px;
+  height: 8px;
 }
 .tableScrollWrapper::-webkit-scrollbar-thumb {
   background: #cbd5e1;
@@ -88,23 +128,23 @@ html, body {
   background: transparent;
 }
 
-
 .attendanceTable {
-  width: 100%;                   /* fits container, not content */
-  table-layout: fixed;           /* columns respect defined widths */
+  width: 100%;                   /* fits container (screen minus 5px each side) */
+  min-width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
   font-size: 13px;
-  background: #ffffff;
+  background: transparent;       /* table itself has no solid background */
 }
 
 .attendanceTable th,
 .attendanceTable td {
-  padding: 0.55rem 0.5rem;
+  padding: 0.55rem 0.4rem;
   text-align: left;
-  border: 1px solid #d9dee5;
+  border: 1px solid #d9dee5;     /* cell borders kept for readability, remove if not wanted */
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;           /* keep single-line rows; ellipsis truncates long text */
+  white-space: nowrap;
 }
 
 .attendanceTable thead th {
@@ -113,36 +153,48 @@ html, body {
   background: #e0f2fe;
   color: #0f172a;
   font-weight: 700;
-  font-size: 12px;
+  font-size: 11.5px;
   z-index: 1;
 }
 
-.attendanceTable tbody tr:nth-child(even) {
-  background: #f8fafc;
+.attendanceTable tbody tr {
+  background: transparent;
 }
 
-/* 12 columns — distribute width to fill 100% without horizontal scroll */
+.attendanceTable tbody tr:nth-child(even) {
+  background: rgba(148, 163, 184, 0.08);
+}
+
+/* 16 columns — widths sum to 100% so the table always fits the page width */
 .attendanceTable th:nth-child(1),
-.attendanceTable td:nth-child(1) { width: 4%; }   /* S.No */
+.attendanceTable td:nth-child(1) { width: 3%; }   /* S.No */
 .attendanceTable th:nth-child(2),
-.attendanceTable td:nth-child(2) { width: 8%; }   /* Date Applied */
+.attendanceTable td:nth-child(2) { width: 6%; }   /* Date Applied */
 .attendanceTable th:nth-child(3),
-.attendanceTable td:nth-child(3) { width: 8%; }   /* Applicant ID */
+.attendanceTable td:nth-child(3) { width: 6%; }   /* Applicant ID */
 .attendanceTable th:nth-child(4),
-.attendanceTable td:nth-child(4) { width: 11%; }  /* Applicant Name */
+.attendanceTable td:nth-child(4) { width: 8%; }   /* Applicant Name */
 .attendanceTable th:nth-child(5),
-.attendanceTable td:nth-child(5) { width: 9%; }   /* Department */
+.attendanceTable td:nth-child(5) { width: 6%; }   /* Department */
 .attendanceTable th:nth-child(6),
-.attendanceTable td:nth-child(6) { width: 9%; }   /* Section */
+.attendanceTable td:nth-child(6) { width: 6%; }   /* Section */
 .attendanceTable th:nth-child(7),
-.attendanceTable td:nth-child(7) { width: 8%; }   /* Leave Type */
+.attendanceTable td:nth-child(7) { width: 6%; }   /* Shift */
 .attendanceTable th:nth-child(8),
-.attendanceTable td:nth-child(8) { width: 8%; cursor: help; } /* Reason */
+.attendanceTable td:nth-child(8) { width: 6%; }   /* Employee Type */
 .attendanceTable th:nth-child(9),
-.attendanceTable td:nth-child(9) { width: 7%; }   /* Status */
+.attendanceTable td:nth-child(9) { width: 6%; }   /* Leave Type */
 .attendanceTable th:nth-child(10),
-.attendanceTable td:nth-child(10) { width: 10%; } /* Attachment */
+.attendanceTable td:nth-child(10) { width: 6%; }  /* From Time */
 .attendanceTable th:nth-child(11),
-.attendanceTable td:nth-child(11) { width: 9%; }  /* Current Approver */
+.attendanceTable td:nth-child(11) { width: 6%; }  /* To Time */
 .attendanceTable th:nth-child(12),
-.attendanceTable td:nth-child(12) { width: 9%; }  /* Approved By */
+.attendanceTable td:nth-child(12) { width: 7%; cursor: help; } /* Reason */
+.attendanceTable th:nth-child(13),
+.attendanceTable td:nth-child(13) { width: 6%; }  /* Status */
+.attendanceTable th:nth-child(14),
+.attendanceTable td:nth-child(14) { width: 7%; }  /* Attachment */
+.attendanceTable th:nth-child(15),
+.attendanceTable td:nth-child(15) { width: 7%; }  /* Current Approver */
+.attendanceTable th:nth-child(16),
+.attendanceTable td:nth-child(16) { width: 7%; }  /* Approved By */

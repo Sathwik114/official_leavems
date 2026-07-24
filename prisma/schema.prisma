@@ -43,10 +43,17 @@ model LeaveRequest {
   status         String           @default("PENDING")
   hodApproval    String?
   hodStatus      String?
+  hodRejectId    String?          @map("HodRejectId")
+  hodRejectReason String?         @map("HodRejectReason")
   cccApproval    String?
   cccStatus      String?
+  cccRejectId    String?          @map("CccRejectId")
+  cccRejectReason String?         @map("CccRejectReason")
   hrApproval     String?
   hrStatus       String?
+  tranId         BigInt?          @map("TranId")
+  tranDate       DateTime?        @map("TranDate")
+  morningLateBy  Decimal?         @db.Decimal(18, 3) @map("MorningLateBy")
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
   approvals      LeaveApproval[]

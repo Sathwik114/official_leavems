@@ -66,7 +66,8 @@ export default function ApplyLeaveForm({ employee, currentUserUsername, approval
   const isSlRelated = leaveTypeForRequest.toUpperCase().includes('SL');
   const exceedsElBalance = isElRelated && totalDaysNum > availableElBalance;
   const exceedsSlBalance = isSlRelated && totalDaysNum > availableSlBalance;
-  const balanceExceeded = exceedsElBalance || exceedsSlBalance;
+  const isVipLeaveRequest = approvalFlow?.role === 'vip';
+  const balanceExceeded = !isVipLeaveRequest && (exceedsElBalance || exceedsSlBalance);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -112,7 +113,9 @@ export default function ApplyLeaveForm({ employee, currentUserUsername, approval
           try {
             const res = await fetch(`/api/employee?empcode=${encodeURIComponent(trimmedId)}`);
             const data = await res.json();
-            return data.employee?.EmpName || trimmedId;
+            return data.employee?.EmpName
+              ? `${data.employee.EmpName} (${trimmedId})`
+              : trimmedId;
           } catch (err) {
             console.error('Approval flow lookup failed:', err);
             return trimmedId;
@@ -170,12 +173,12 @@ export default function ApplyLeaveForm({ employee, currentUserUsername, approval
       return;
     }
 
-    if (exceedsElBalance) {
+    if (!isVipLeaveRequest && exceedsElBalance) {
       setSubmitError(`Insufficient EL balance. Available: ${availableElBalance.toFixed(2)}, Requested: ${totalDaysNum.toFixed(2)}.`);
       return;
     }
 
-    if (exceedsSlBalance) {
+    if (!isVipLeaveRequest && exceedsSlBalance) {
       setSubmitError(`Insufficient SL balance. Available: ${availableSlBalance.toFixed(2)}, Requested: ${totalDaysNum.toFixed(2)}.`);
       return;
     }
@@ -212,7 +215,10 @@ export default function ApplyLeaveForm({ employee, currentUserUsername, approval
       }
 
       setSubmitMessage(`Leave application submitted successfully. First approval is pending with ${data.currentApproverName || data.currentApprover || 'the configured approver'}.`);
-      setTimeout(() => router.push('/dashboard'), 1200);
+      const nextPage = approvalFlow?.role === 'vip'
+        ? '/dashboard/leave-approvals'
+        : '/dashboard';
+      setTimeout(() => router.push(nextPage), 1200);
     } catch (err) {
       console.error('Leave submission failed:', err);
       setSubmitError(err.message || 'Leave submission failed.');
