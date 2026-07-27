@@ -102,7 +102,7 @@ function createConfig(databaseName = DATABASE_NAME) {
   };
 }
 
-async function getPool(databaseName = DATABASE_NAME) {
+export async function getPool(databaseName = DATABASE_NAME) {
   const key = databaseName || DATABASE_NAME;
 
   if (!poolCache[key]) {
@@ -353,7 +353,154 @@ export async function ensureLeaveTables() {
 
     IF EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = 'LeaveApprovals' AND COLUMN_NAME = 'ApproverId' AND DATA_TYPE <> 'nvarchar')
       ALTER TABLE dbo.LeaveApprovals ALTER COLUMN ApproverId NVARCHAR(100) NOT NULL;
+
+    IF OBJECT_ID(N'dbo.AllLeaveRequests', N'U') IS NULL
+    BEGIN
+      CREATE TABLE dbo.AllLeaveRequests (
+        Id INT IDENTITY(1,1) PRIMARY KEY,
+        LeaveRequestId INT NOT NULL UNIQUE,
+        ApplicantId NVARCHAR(100) NOT NULL,
+        ApplicantName NVARCHAR(200) NULL,
+        Department NVARCHAR(100) NULL,
+        Section NVARCHAR(100) NULL,
+        Shift NVARCHAR(100) NULL,
+        EmpType NVARCHAR(100) NULL,
+        LeaveType NVARCHAR(100) NOT NULL,
+        StartDate DATETIME NOT NULL,
+        EndDate DATETIME NOT NULL,
+        FromTime NVARCHAR(20) NULL,
+        ToTime NVARCHAR(20) NULL,
+        CAPINTIME NVARCHAR(100) NULL,
+        CAPOUTTIME NVARCHAR(100) NULL,
+        MorningLateBy DECIMAL(18,3) NULL,
+        TotalDays DECIMAL(5,2) NOT NULL,
+        Reason NVARCHAR(MAX) NOT NULL,
+        RelieverId NVARCHAR(100) NULL,
+        RelieverName NVARCHAR(200) NULL,
+        ContactNumber NVARCHAR(100) NULL,
+        AttachmentName NVARCHAR(255) NULL,
+        AttachmentType NVARCHAR(100) NULL,
+        ApprovalFlow NVARCHAR(500) NOT NULL,
+        CurrentApprover NVARCHAR(100) NOT NULL,
+        ApprovedBy NVARCHAR(100) NULL,
+        ApprovedAt DATETIME NULL,
+        HodApproval NVARCHAR(100) NULL,
+        HodStatus NVARCHAR(50) NULL,
+        CccApproval NVARCHAR(100) NULL,
+        CccStatus NVARCHAR(50) NULL,
+        CccRejectId NVARCHAR(100) NULL,
+        CccRejectReason NVARCHAR(MAX) NULL,
+        HrApproval NVARCHAR(100) NULL,
+        HrStatus NVARCHAR(50) NULL,
+        Status NVARCHAR(50) NOT NULL DEFAULT 'PENDING',
+        CreatedAt DATETIME NOT NULL DEFAULT GETDATE(),
+        UpdatedAt DATETIME NOT NULL DEFAULT GETDATE(),
+        TranId BIGINT NULL,
+        TranDate DATETIME NULL
+      );
+    END;
   `);
+}
+
+async function syncAcceptedLeaveRequestToArchive(leaveRequestId) {
+  if (!leaveRequestId) return;
+
+  const pool = await getPool();
+  await pool.request()
+    .input('LeaveRequestId', sql.Int, leaveRequestId)
+    .query(`
+      IF NOT EXISTS (
+        SELECT 1
+        FROM dbo.AllLeaveRequests
+        WHERE LeaveRequestId = @LeaveRequestId
+      )
+      BEGIN
+        INSERT INTO dbo.AllLeaveRequests (
+          LeaveRequestId,
+          ApplicantId,
+          ApplicantName,
+          Department,
+          Section,
+          Shift,
+          EmpType,
+          LeaveType,
+          StartDate,
+          EndDate,
+          FromTime,
+          ToTime,
+          CAPINTIME,
+          CAPOUTTIME,
+          MorningLateBy,
+          TotalDays,
+          Reason,
+          RelieverId,
+          RelieverName,
+          ContactNumber,
+          AttachmentName,
+          AttachmentType,
+          ApprovalFlow,
+          CurrentApprover,
+          ApprovedBy,
+          ApprovedAt,
+          HodApproval,
+          HodStatus,
+          CccApproval,
+          CccStatus,
+          CccRejectId,
+          CccRejectReason,
+          HrApproval,
+          HrStatus,
+          Status,
+          CreatedAt,
+          UpdatedAt,
+          TranId,
+          TranDate
+        )
+        SELECT
+          Id,
+          ApplicantId,
+          ApplicantName,
+          Department,
+          Section,
+          Shift,
+          EmpType,
+          LeaveType,
+          StartDate,
+          EndDate,
+          FromTime,
+          ToTime,
+          CAPINTIME,
+          CAPOUTTIME,
+          MorningLateBy,
+          TotalDays,
+          Reason,
+          RelieverId,
+          RelieverName,
+          ContactNumber,
+          AttachmentName,
+          AttachmentType,
+          ApprovalFlow,
+          CurrentApprover,
+          ApprovedBy,
+          ApprovedAt,
+          HodApproval,
+          HodStatus,
+          CccApproval,
+          CccStatus,
+          CccRejectId,
+          CccRejectReason,
+          HrApproval,
+          HrStatus,
+          Status,
+          COALESCE(CreatedAt, GETDATE()),
+          COALESCE(UpdatedAt, GETDATE()),
+          TranId,
+          TranDate
+        FROM dbo.LeaveRequests
+        WHERE Id = @LeaveRequestId
+          AND LOWER(COALESCE(CccStatus, '')) = 'accept';
+      END;
+    `);
 }
 
 export async function createLeaveRequest(payload) {
@@ -628,12 +775,17 @@ export async function updateLeaveRequestStatus(leaveRequestId, currentApprover, 
           CccApproval = CASE WHEN @StepNumber = 2 AND @ApprovedBy IS NOT NULL AND @ApprovedBy <> '' THEN @ApprovedBy ELSE CccApproval END,
           CccStatus = CASE WHEN @StepNumber = 2 AND @ApprovedBy IS NOT NULL AND @ApprovedBy <> '' THEN 'Accept' ELSE CccStatus END,
           UpdatedAt = GETDATE()
-      OUTPUT DELETED.Status AS PreviousStatus, INSERTED.ApplicantId, INSERTED.LeaveType, INSERTED.TotalDays
+      OUTPUT DELETED.Status AS PreviousStatus, INSERTED.Status AS NewStatus, INSERTED.CccStatus AS UpdatedCccStatus, INSERTED.ApplicantId, INSERTED.LeaveType, INSERTED.TotalDays
       WHERE Id = @LeaveRequestId;
     `);
 
   const row = result.recordset[0];
   const justBecameApproved = row && row.PreviousStatus !== 'APPROVED' && status === 'APPROVED';
+  const cccWasAccepted = Boolean(row && String(row.UpdatedCccStatus || '').trim().toLowerCase() === 'accept');
+
+  if (cccWasAccepted) {
+    await syncAcceptedLeaveRequestToArchive(leaveRequestId);
+  }
 
   if (justBecameApproved) {
     const updatedBalance = await deductLeaveBalance(row.ApplicantId, row.LeaveType, row.TotalDays).catch((err) => {

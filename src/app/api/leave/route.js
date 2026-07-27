@@ -5,6 +5,7 @@ import { createLeaveRequestWithInitialApproval, getPendingApprovalsForUser, getA
 import { getLeaveApprovalFlow } from '@/lib/leaveApprovalConfig';
 import { getEmployeeDetails } from '@/lib/payrollDb';
 import { getUserEmail, sendMail, buildLeaveRequestEmailContent, getApprovalLink, getDirectApproveLink, getDirectRejectLink } from '@/lib/mail';
+import { saveLeaveDocument } from '@/lib/leaveDocumentStorage';
 
 export async function GET() {
   try {
@@ -33,7 +34,21 @@ export async function GET() {
 
 export async function POST(request) {
   try {
-    const body = await request.json();
+    const contentType = request.headers.get('content-type') || '';
+    let body = {};
+    let attachmentFile = null;
+
+    if (contentType.includes('multipart/form-data')) {
+      const formData = await request.formData();
+      body = Object.fromEntries(formData.entries());
+      const attachmentEntry = formData.get('attachment');
+      if (attachmentEntry instanceof File && attachmentEntry.size > 0) {
+        attachmentFile = attachmentEntry;
+      }
+    } else {
+      body = await request.json();
+    }
+
     const {
       applicantId,
       applicantName,
@@ -47,14 +62,22 @@ export async function POST(request) {
       relieverId,
       relieverName,
       contactNumber,
-      attachmentName,
-      attachmentType,
       currentUserUsername,
     } = body;
 
     if (!applicantId || !startDate || !endDate || !reason) {
       return NextResponse.json(
         { error: 'Applicant id, dates, and reason are required.' },
+        { status: 400 }
+      );
+    }
+
+    const normalizedLeaveType = String(leaveType || '').trim();
+    const requiresAttachment = normalizedLeaveType.toUpperCase() === 'SL' && Number(totalDays || 0) > 1;
+
+    if (requiresAttachment && !attachmentFile) {
+      return NextResponse.json(
+        { error: 'A supporting document is required for sick leave requests longer than one day.' },
         { status: 400 }
       );
     }
@@ -94,7 +117,7 @@ export async function POST(request) {
       section: applicantEmployee?.Section || '',
       shift: applicantEmployee?.Shift || '',
       empType: applicantEmployee?.EmpType || '',
-      leaveType: leaveType || 'EL',
+      leaveType: normalizedLeaveType || 'EL',
       startDate: new Date(startDate),
       endDate: new Date(endDate),
       fromTime: String(fromTime || '').trim() || null,
@@ -104,17 +127,31 @@ export async function POST(request) {
       relieverId: relieverId || null,
       relieverName: relieverName || null,
       contactNumber: contactNumber || null,
-      attachmentName: attachmentName || null,
-      attachmentType: attachmentType || null,
+      attachmentName: attachmentFile?.name || null,
+      attachmentType: attachmentFile?.type || null,
       approvalFlow: approvalFlow.flow.join(','),
       currentApprover: approvalFlow.initialApprover,
     }, approvalFlow.initialApprover);
 
-    // createLeaveRequest now returns the inserted row; use its Id property
+    console.debug('Leave submission: savedLeaveRequest', {
+      id: savedLeaveRequest?.Id,
+      tranId: savedLeaveRequest?.TranId,
+      attachmentNameFromPayload: attachmentFile?.name || null,
+      attachmentTypeFromPayload: attachmentFile?.type || null,
+      savedAttachmentName: savedLeaveRequest?.AttachmentName || null,
+    });
+
     const leaveId = savedLeaveRequest?.Id || savedLeaveRequest?.id || null;
+    const tranId = String(savedLeaveRequest?.TranId || '').trim();
 
     if (!leaveId) {
       return NextResponse.json({ error: 'Failed to determine saved leave request id.' }, { status: 500 });
+    }
+
+    if (requiresAttachment && attachmentFile) {
+      console.debug('Leave submission: saving attachment to OnlineLeavePDF', { tranId, name: attachmentFile.name, type: attachmentFile.type, size: attachmentFile.size });
+      await saveLeaveDocument(tranId, attachmentFile, attachmentFile.name, attachmentFile.type);
+      console.debug('Leave submission: saveLeaveDocument completed for', { tranId });
     }
 
     const firstApproverEmail = getUserEmail(approvalFlow.initialApprover);

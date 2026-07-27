@@ -50,13 +50,11 @@ export default function ApplyLeaveForm({ employee, currentUserUsername, approval
   const today = new Date().toLocaleDateString('en-GB');
 
   const totalDaysNum = parseFloat(totalDays) || 0;
-  const isSickLeaveOverThree = leaveType === 'SL' && totalDaysNum > 3;
-  const isEsiOrMl = leaveType === 'ESI' || leaveType === 'ML';
-  const requiresAttachment = isSickLeaveOverThree || isEsiOrMl;
   const fromTime = `${startHour}:${startMin} ${startPeriod}`;
   const toTime = `${endHour}:${endMin} ${endPeriod}`;
   const halfDayLeaveType = getHalfDayLeaveType(leaveType, fromTime, toTime, startDate, endDate);
   const leaveTypeForRequest = halfDayLeaveType || leaveType;
+  const requiresAttachment = String(leaveTypeForRequest || '').toUpperCase() === 'SL' && totalDaysNum > 1;
 
   // Balances, formatted consistently as e.g. "0.00" / "1.50"
   const availableElBalance = Number(employee?.EarnLeaveBalance ?? 0);
@@ -183,29 +181,36 @@ export default function ApplyLeaveForm({ employee, currentUserUsername, approval
       return;
     }
 
+    if (requiresAttachment && !attachment) {
+      setSubmitError('Please upload a supporting document for sick leave requests longer than one day.');
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
+      const formData = new FormData();
+      formData.append('applicantId', applicantId);
+      formData.append('applicantName', employee?.EmpName || '');
+      formData.append('leaveType', leaveTypeForRequest);
+      formData.append('startDate', startDate);
+      formData.append('endDate', endDate);
+      formData.append('fromTime', fromTime);
+      formData.append('toTime', toTime);
+      formData.append('totalDays', String(totalDaysNum));
+      formData.append('reason', reason);
+      formData.append('relieverId', relieverId);
+      formData.append('relieverName', relieverName);
+      formData.append('contactNumber', contactNumber);
+      formData.append('currentUserUsername', currentUserUsername || '');
+
+      if (attachment) {
+        formData.append('attachment', attachment);
+      }
+
       const res = await fetch('/api/leave', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          applicantId,
-          applicantName: employee?.EmpName || '',
-          leaveType: leaveTypeForRequest,
-          startDate,
-          endDate,
-          fromTime,
-          toTime,
-          totalDays: totalDaysNum,
-          reason,
-          relieverId,
-          relieverName,
-          contactNumber,
-          attachmentName: attachment?.name || null,
-          attachmentType: attachment?.type || null,
-          currentUserUsername,
-        }),
+        body: formData,
       });
 
       const data = await res.json();
@@ -418,14 +423,12 @@ export default function ApplyLeaveForm({ employee, currentUserUsername, approval
                   <label>Upload Supporting Document</label>
                   <input
                     type="file"
-                    accept=".pdf,.jpg,.jpeg,.png"
+                    accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.bmp,.tif,.tiff,.svg"
                     onChange={(e) => setAttachment(e.target.files?.[0] || null)}
                   />
                 </div>
                 <p className="leaveAttachmentNote">
-                  {isEsiOrMl
-                    ? 'Please upload the verified doctor\u2019s document.'
-                    : 'Please upload the file copy of doctor\u2019s sheet.'}
+                  Please upload the supporting document for this sick leave request.
                 </p>
               </div>
             )}

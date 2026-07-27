@@ -10,6 +10,13 @@ function truncateReason(reason) {
   return reason.slice(0, 10) + '...';
 }
 
+function formatDisplayDate(value) {
+  if (!value) return '-';
+  const parsedDate = new Date(value);
+  if (Number.isNaN(parsedDate.getTime())) return '-';
+  return parsedDate.toLocaleDateString('en-GB');
+}
+
 export default function MyLeavesPage() {
   const [myRequests, setMyRequests] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -37,9 +44,11 @@ export default function MyLeavesPage() {
   const filteredRequests = useMemo(() => {
     if (!dateFilter) return myRequests;
     return myRequests.filter((request) => {
-      if (!request.CreatedAt) return false;
-      const requestDate = new Date(request.CreatedAt).toISOString().split('T')[0];
-      return requestDate === dateFilter;
+      const requestDateValue = request.DateApplied || request.CreatedAt || request.StartDate;
+      if (!requestDateValue) return false;
+      const requestDate = new Date(requestDateValue);
+      if (Number.isNaN(requestDate.getTime())) return false;
+      return requestDate.toISOString().split('T')[0] === dateFilter;
     });
   }, [myRequests, dateFilter]);
 
@@ -101,7 +110,7 @@ export default function MyLeavesPage() {
                 {filteredRequests.map((request, index) => (
                   <tr key={request.Id}>
                     <td>{totalRows - index}</td>
-                    <td>{request.CreatedAt ? new Date(request.CreatedAt).toLocaleDateString('en-GB') : '-'}</td>
+                    <td>{formatDisplayDate(request.DateApplied || request.CreatedAt || request.StartDate)}</td>
                     <td>{request.ApplicantId || '-'}</td>
                     <td>{request.ApplicantName || '-'}</td>
                     <td>{request.Department || '-'}</td>
@@ -113,7 +122,20 @@ export default function MyLeavesPage() {
                     <td>{request.ToTime || '-'}</td>
                     <td title={request.Reason || ''}>{truncateReason(request.Reason)}</td>
                     <td>{request.Status}</td>
-                    <td>{request.AttachmentName || '-'}</td>
+                    <td>
+                      {request.TranId && request.AttachmentName ? (
+                        <a
+                          href={`/api/leave/document/${request.TranId}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ color: '#2563eb', textDecoration: 'underline' }}
+                        >
+                          {request.AttachmentName}
+                        </a>
+                      ) : (
+                        request.AttachmentName || '-'
+                      )}
+                    </td>
                     <td>{request.CurrentApprover || '-'}</td>
                     <td>{formatApproverList(request.ApprovedBy)}</td>
                   </tr>

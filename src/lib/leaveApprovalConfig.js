@@ -14,6 +14,9 @@ export const LEAVE_ROLE_RULES = {
   special: {
     ccc: '140287',
   },
+  hr: {
+    ids: ['111075', '230506'],
+  }
 };
 
 const normalizeId = (value) => String(value || '').trim();
@@ -27,7 +30,10 @@ export function isCccUser(userId) {
 }
 
 export function getDashboardRedirectForUser(userId) {
-  return isCccUser(userId) ? '/dashboard/leave-approvals' : '/dashboard';
+  const normalizedUserId = normalizeId(userId);
+  const isHrUser = (LEAVE_ROLE_RULES.hr?.ids || []).map(normalizeId).includes(normalizedUserId);
+
+  return isCccUser(normalizedUserId) || isHrUser ? '/dashboard/monitor-hod' : '/dashboard';
 }
 
 export function getAllApplicantIds() {
@@ -35,6 +41,7 @@ export function getAllApplicantIds() {
     ...(LEAVE_ROLE_RULES.mf.ids || []),
     ...(LEAVE_ROLE_RULES.adm.ids || []),
     ...(LEAVE_ROLE_RULES.vip.ids || []),
+    ...(LEAVE_ROLE_RULES.hr?.ids || []),
   ].map(normalizeId);
 }
 

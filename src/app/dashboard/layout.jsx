@@ -41,9 +41,10 @@ export default async function DashboardLayout({ children }) {
   const isApprover = isApproverUser(currentUserId);
   const isRoleUser = isApplicantUser(currentUserId) || isApprover;
 
-  const showDashboardLink = !isCCC;
-  const showApproveLink = isCCC || isApprover || isVipApplicant;
-  const showMyLeavesLink = !isCCC && (isMfApplicant || isAdmApplicant || isVipApplicant || isApprover);
+  const isHrUser = (LEAVE_ROLE_RULES.hr?.ids || []).map((id) => String(id).trim()).includes(currentUserId);
+  const showDashboardLink = !isCCC && !isHrUser;
+  const showApproveLink = isCCC || (isApprover || isVipApplicant) && !isHrUser;
+  const showMyLeavesLink = !isCCC && !isHrUser && (isMfApplicant || isAdmApplicant || isVipApplicant || isApprover);
 
   return (
     <div className="dashboardShell">
@@ -70,7 +71,7 @@ export default async function DashboardLayout({ children }) {
                 <span className="navIcon">📋</span> My Leaves
               </Link>
             )}
-            {isCCC && (
+            {(isCCC || isHrUser) && (
               <Link href="/dashboard/monitor-hod" className="dashboardNavLink">
                 <span className="navIcon">📊</span> Monitor HOD&apos;s Attendance
               </Link>

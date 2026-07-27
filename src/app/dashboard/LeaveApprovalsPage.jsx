@@ -105,7 +105,20 @@ export default function LeaveApprovalsPage() {
         <td>{request.ToTime || '-'}</td>
         <td>{request.TotalDays}</td>
         <td>{request.Reason}</td>
-        <td>{request.AttachmentName || '-'}</td>
+        <td>
+          {request.TranId && request.AttachmentName ? (
+            <a
+              href={`/api/leave/document/${request.TranId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: '#2563eb', textDecoration: 'underline' }}
+            >
+              {request.AttachmentName}
+            </a>
+          ) : (
+            request.AttachmentName || '-'
+          )}
+        </td>
         <td>{request.CurrentApprover || '-'}</td>
         <td>{formatApproverList(request.ApprovedBy)}</td>
         <td>{request.Status}</td>
@@ -168,6 +181,7 @@ export default function LeaveApprovalsPage() {
   }
 
   const approvedByList = activeRequest ? normalizeApproverList(activeRequest.ApprovedBy) : [];
+  const isActionableRequest = Boolean(activeRequest && !['APPROVED', 'REJECTED'].includes(String(activeRequest.Status || '').toUpperCase()));
 
   return (
     <div className="dashboardPage">
@@ -359,16 +373,21 @@ export default function LeaveApprovalsPage() {
                   <div className="leaveDetailCell leaveDetailCellValue leaveDetailCellSpan">{activeRequest.Reason || '-'}</div>
                 </div>
 
-                <div className="leaveDetailRow leaveDetailRowApprover">
-                  <div className="leaveDetailCell leaveDetailApproverName">{activeRequest.CurrentApprover || '-'}</div>
-                  <div className="leaveDetailCell leaveDetailApproverStatus">
-                    {activeRequest.Status === 'APPROVED' ? 'Approved' : 'Waiting'}
-                  </div>
-                  <div className="leaveDetailCell leaveDetailApproverName">
-                    {approvedByList.length > 0 ? approvedByList[approvedByList.length - 1] : ''}
-                  </div>
-                  <div className="leaveDetailCell leaveDetailApproverStatus">
-                    {approvedByList.length > 0 ? 'Approved' : ''}
+                <div className="leaveDetailRow">
+                  <div className="leaveDetailCell leaveDetailCellLabel">Attachment :-</div>
+                  <div className="leaveDetailCell leaveDetailCellValue leaveDetailCellSpan">
+                    {activeRequest.TranId && activeRequest.AttachmentName ? (
+                      <a
+                        href={`/api/leave/document/${activeRequest.TranId}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ color: '#2563eb', textDecoration: 'underline' }}
+                      >
+                        {activeRequest.AttachmentName}
+                      </a>
+                    ) : (
+                      activeRequest.AttachmentName || '-'
+                    )}
                   </div>
                 </div>
 
@@ -386,14 +405,16 @@ export default function LeaveApprovalsPage() {
                 </div>
               </div>
 
-              <div className="leaveDetailActions">
-                <button type="button" className="leaveDetailRejectButton" onClick={handleRejectDetail}>
-                  Reject
-                </button>
-                <button type="button" className="leaveDetailApproveButton" onClick={handleApproveDetail}>
-                  Accept
-                </button>
-              </div>
+              {isActionableRequest && (
+                <div className="leaveDetailActions">
+                  <button type="button" className="leaveDetailRejectButton" onClick={handleRejectDetail}>
+                    Reject
+                  </button>
+                  <button type="button" className="leaveDetailApproveButton" onClick={handleApproveDetail}>
+                    Accept
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
