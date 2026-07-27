@@ -241,3 +241,43 @@ export async function getAttendanceEmployeeDetails(empcode) {
 
   return result.recordset[0] || null;
 }
+
+export async function getLeaveData(empcode, year) {
+  try {
+    const pool = await getPool();
+
+    const request = pool
+      .request()
+      .input("empcode", sql.NVarChar, String(empcode));
+
+    // Filter by the year portion of FromDate (e.g. '2026-07-09 00:00:00' -> 2026)
+    // when a year is supplied.
+    let dateFilter = "";
+    if (year) {
+      request.input("year", sql.Int, parseInt(year));
+      dateFilter = "AND YEAR(FromDate) = @year";
+    }
+
+    const result = await request.query(`
+      SELECT
+        Empcode,
+        TranDate,
+        LeaveType,
+        FromDate,
+        ToDate,
+        FromTime,
+        ToTime,
+        NoofDays,
+        Reason
+      FROM OnlineLeaveEntry
+      WHERE Empcode = @empcode
+      ${dateFilter}
+      ORDER BY FromDate DESC
+    `);
+
+    return result.recordset || [];
+  } catch (err) {
+    console.error(`Error fetching leave data for ${empcode}:`, err);
+    return [];
+  }
+}

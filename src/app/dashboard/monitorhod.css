@@ -106,6 +106,29 @@
   box-shadow: 0 0 0 3px rgba(125, 211, 252, 0.25);
 }
 
+.yearInput {
+  width: 5.5rem;
+  padding: 0.45rem 0.7rem;
+  border-radius: 0.6rem;
+  border: 1.5px solid #fbcfe8;
+  background: #ffffff;
+  font-size: 13px;
+  color: #334155;
+  outline: none;
+  -moz-appearance: textfield;
+}
+
+.yearInput:focus {
+  border-color: #7dd3fc;
+  box-shadow: 0 0 0 3px rgba(125, 211, 252, 0.25);
+}
+
+.yearInput::-webkit-outer-spin-button,
+.yearInput::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
 .backToListButton {
   padding: 0.5rem 1rem;
   border-radius: 0.7rem;
@@ -143,20 +166,21 @@
   display: inline-block;
   padding: 0.2rem 0.65rem;
   border-radius: 0.5rem;
-  background: linear-gradient(135deg, #fde68a, #fca5a5);
-  color: #7c2d12;
+  background: linear-gradient(135deg, #7dd3fc, #f472b6);
+  color: #ffffff;
   font-weight: 800;
   font-size: 13px;
-  box-shadow: 0 4px 10px -4px rgba(124, 45, 18, 0.35);
+  box-shadow: 0 4px 10px -4px rgba(124, 58, 237, 0.35);
 }
 
 .hodTableWrapper {
   width: 100%;
+  box-sizing: border-box;
   background: #ffffff;
-  border: 1px solid #fbcfe8;
+  border: 2px solid #c084fc;
   border-radius: 0.9rem;
   overflow: hidden;
-  box-shadow: 0 14px 30px -16px rgba(190, 24, 93, 0.2);
+  box-shadow: 0 16px 34px -14px rgba(124, 58, 237, 0.4);
   display: flex;
   flex-direction: column;
   min-height: 0;           /* NEW */
@@ -165,6 +189,7 @@
 
 .attendanceTable {
   width: 100%;
+  min-width: 100%;
   table-layout: fixed;
   border-collapse: collapse;
   font-size: 13px;
@@ -177,26 +202,44 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  text-align: left;
-  border-bottom: 1px solid #fce7f3;
+  text-align: center;
+  border-bottom: 1px solid #f3d6e8;
+  border-right: 1px solid #f3d6e8;
+  color: #1e1b3a;
+  font-weight: 600;
+}
+
+.attendanceTable th:last-child,
+.attendanceTable td:last-child {
+  border-right: none;
 }
 
 .attendanceTable thead th {
-  background: #fdf2f8;
-  color: #be185d;
-  font-weight: 700;
-  font-size: 11.5px;
+  background: #503e3e;
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 12px;
   text-transform: uppercase;
-  letter-spacing: 0.03em;
-  border-bottom: 2px solid #fbcfe8;
+  letter-spacing: 0.05em;
+  border-bottom: 3px solid #8a7461;
+  border-right: 1px solid rgba(255, 255, 255, 0.25);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
 }
 
-.attendanceTable tbody tr:nth-child(even) {
+.attendanceTable thead th:last-child {
+  border-right: none;
+}
+
+.attendanceTable tbody tr:nth-child(odd) {
   background: #ffffff;
 }
 
+.attendanceTable tbody tr:nth-child(even) {
+  background: #fdf0f7;
+}
+
 .attendanceTable tbody tr:hover {
-  background: #f9fafb;
+  background: #fde3f0;
 }
 
 .attendanceTable tbody tr:last-child td {
@@ -205,9 +248,12 @@
 
 /* Generic scrollable wrapper with sticky header, used by both tables.
    Row heights are pinned via explicit height rules below so this
-   max-height reliably shows exactly ~10 body rows before scrolling. */
+   max-height reliably shows exactly N body rows before scrolling. */
 .scrollableTableWrapper {
+  width: 100%;
+  box-sizing: border-box;
   overflow-y: auto;
+  overflow-x: auto;
   position: relative;
   min-height: 0;           /* NEW */
 }
@@ -216,72 +262,191 @@
   position: sticky;
   top: 0;
   z-index: 2;
+  box-shadow: 0 3px 6px -2px rgba(76, 29, 149, 0.35);
 }
 
 /* HOD list table: fixed row heights so "10 rows then scroll" is exact */
 .hodListTable thead tr {
-  height: 34px;
+  height: 28px;
 }
 
 .hodListTable tbody tr {
-  height: 40px;
+  height: 30px;
 }
 
 .hodListTable th,
 .hodListTable td {
-  padding: 0.3rem 0.55rem;
-  font-size: 12.5px;
+  padding: 0.18rem 0.5rem;
+  font-size: 12px;
 }
 
-/* header(34) + 10 body rows(40) = 434px */
 .hodListWrapper {
   max-height: none;
   overflow-x: visible;
 }
 
 .hodListTable th:nth-child(1),
-.hodListTable td:nth-child(1) { width: 12%; } /* Employee ID */
+.hodListTable td:nth-child(1) { width: 10%; } /* Employee ID */
 .hodListTable th:nth-child(2),
-.hodListTable td:nth-child(2) { width: 34%; } /* Employee Name */
+.hodListTable td:nth-child(2) { width: 28%; } /* Employee Name */
 .hodListTable th:nth-child(3),
-.hodListTable td:nth-child(3) { width: 14%; } /* Department */
+.hodListTable td:nth-child(3) { width: 12%; } /* Department */
 .hodListTable th:nth-child(4),
-.hodListTable td:nth-child(4) { width: 14%; } /* Section */
+.hodListTable td:nth-child(4) { width: 12%; } /* Section */
 .hodListTable th:nth-child(5),
-.hodListTable td:nth-child(5) { width: 26%; } /* Action */
+.hodListTable td:nth-child(5) { width: 38%; } /* View */
 
-/* Detail attendance table: fixed row heights, same "10 rows then scroll" rule */
+.hodActionsCell {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+/* Detail attendance table: compact row heights, wrapper flexes to fill
+   whatever vertical space is left on screen rather than a fixed pixel cap */
 .attendanceDetailTable thead tr {
-  height: 32px;
+  height: 26px;
 }
 
 .attendanceDetailTable tbody tr {
-  height: 38px;
+  height: 26px;
 }
 
 .attendanceDetailTable th,
 .attendanceDetailTable td {
-  padding: 0.28rem 0.5rem;
-  font-size: 12.5px;
+  padding: 0.14rem 0.5rem;
+  font-size: 12px;
 }
 
-/* header(32) + 10 body rows(38) = 412px */
 .attendanceDetailWrapper {
-  max-height: 412px;
+  max-height: 100%;
+  flex: 1;
+  min-height: 0;
 }
 
 .attendanceDetailTable th:nth-child(1),
-.attendanceDetailTable td:nth-child(1) { width: 15%; } /* Date */
+.attendanceDetailTable td:nth-child(1) { width: 25%; } /* Date */
 .attendanceDetailTable th:nth-child(2),
-.attendanceDetailTable td:nth-child(2) { width: 9%;  } /* Day */
+.attendanceDetailTable td:nth-child(2) { width: 25%; } /* Attendance Type */
 .attendanceDetailTable th:nth-child(3),
-.attendanceDetailTable td:nth-child(3) { width: 14%; } /* Status */
+.attendanceDetailTable td:nth-child(3) { width: 25%; } /* In Time */
 .attendanceDetailTable th:nth-child(4),
-.attendanceDetailTable td:nth-child(4) { width: 17%; } /* Check-In */
-.attendanceDetailTable th:nth-child(5),
-.attendanceDetailTable td:nth-child(5) { width: 17%; } /* Check-Out */
-.attendanceDetailTable th:nth-child(6),
-.attendanceDetailTable td:nth-child(6) { width: 28%; } /* Work Hours */
+.attendanceDetailTable td:nth-child(4) { width: 25%; } /* Out Time */
+
+.downloadExcelButton {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.5rem 1rem;
+  border-radius: 0.7rem;
+  border: none;
+  background: linear-gradient(135deg, #34d399, #10b981);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 6px 14px -6px rgba(16, 185, 129, 0.4);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+}
+
+.downloadExcelButton:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 18px -6px rgba(16, 185, 129, 0.5);
+  opacity: 0.95;
+}
+
+.downloadExcelButton:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.downloadExcelButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.viewLeaveButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.8rem;
+  border-radius: 0.6rem;
+  border: none;
+  background: linear-gradient(135deg, #aea8c0);
+  color: #1f1c1c;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 6px 14px -6px rgba(124, 58, 237, 0.4);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+}
+
+.viewLeaveButton:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 18px -6px rgba(124, 58, 237, 0.5);
+  opacity: 0.95;
+}
+
+.viewLeaveButton:active {
+  transform: translateY(0);
+}
+
+/* Leave header info: Empcode / Empname / Department / Section */
+.leaveInfoGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(220px, 1fr));
+  gap: 0.6rem 1.5rem;
+  margin-bottom: 1rem;
+  font-size: 13.5px;
+  color: #334155;
+}
+
+.leaveInfoGrid strong {
+  color: #075985;
+  font-weight: 700;
+  margin-right: 0.3rem;
+}
+
+/* Leave detail table: same compact row heights as the attendance table */
+.leaveDetailTable thead tr {
+  height: 26px;
+}
+
+.leaveDetailTable tbody tr {
+  height: 26px;
+}
+
+.leaveDetailTable th,
+.leaveDetailTable td {
+  padding: 0.14rem 0.5rem;
+  font-size: 12px;
+}
+
+.leaveDetailWrapper {
+  max-height: 100%;
+  flex: 1;
+  min-height: 0;
+}
+
+.leaveDetailTable th:nth-child(1),
+.leaveDetailTable td:nth-child(1) { width: 12%; } /* From Date */
+.leaveDetailTable th:nth-child(2),
+.leaveDetailTable td:nth-child(2) { width: 12%; } /* To Date */
+.leaveDetailTable th:nth-child(3),
+.leaveDetailTable td:nth-child(3) { width: 11%; } /* From Time */
+.leaveDetailTable th:nth-child(4),
+.leaveDetailTable td:nth-child(4) { width: 11%; } /* To Time */
+.leaveDetailTable th:nth-child(5),
+.leaveDetailTable td:nth-child(5) { width: 12%; } /* Leave Type */
+.leaveDetailTable th:nth-child(6),
+.leaveDetailTable td:nth-child(6) { width: 10%; } /* No. of Days */
+.leaveDetailTable th:nth-child(7),
+.leaveDetailTable td:nth-child(7) { width: 32%; } /* Reason */
 
 .viewAttendanceButton {
   display: inline-flex;
@@ -290,8 +455,8 @@
   padding: 0.35rem 0.8rem;
   border-radius: 0.6rem;
   border: none;
-  background: linear-gradient(135deg, #38bdf8, #f472b6);
-  color: #ffffff;
+  background: linear-gradient(135deg, #a08086);
+  color: #fbfbfc;
   font-size: 12px;
   font-weight: 700;
   cursor: pointer;
