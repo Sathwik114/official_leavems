@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import * as jose from 'jose';
 import ldap from 'ldapjs';
 
+
+
 function buildCandidateDns(username, baseDN) {
   const normalized = (username || '').trim();
   if (!normalized) return [];

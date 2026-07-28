@@ -1,0 +1,35 @@
+.pendingLeavesContainer {
+  padding: 24px;
+}
+
+.pendingLeavesTitle {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+.pendingLeavesEmpty {
+  color: #666;
+}
+
+.pendingLeavesTableWrapper {
+  overflow-x: auto;
+}
+
+.pendingLeavesTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.pendingLeavesTable th,
+.pendingLeavesTable td {
+  border: 1px solid #e0e0e0;
+  padding: 8px 12px;
+  text-align: left;
+  font-size: 0.9rem;
+}
+
+.pendingLeavesTable th {
+  background-color: #f5f5f5;
+  font-weight: 600;
+}

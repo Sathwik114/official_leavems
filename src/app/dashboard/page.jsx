@@ -1,10 +1,11 @@
 import './page.css';
 import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
 import * as jose from 'jose';
 import { getAttendance } from '@/lib/attendanceDb';
 import { ensureLeaveTables } from '@/lib/leaveDb';
 import { getEmployeeDetails } from '@/lib/payrollDb';
-import { isCccUser } from '@/lib/leaveApprovalConfig';
+import { isCccUser, isHrUser } from '@/lib/leaveApprovalConfig';
 import AttendanceTable from './AttendanceTable';
 
 export default async function Dashboard() {
@@ -43,6 +44,11 @@ export default async function Dashboard() {
     } catch (err) {
       console.error('JWT Error:', err);
     }
+  }
+
+  // HR users don't use this dashboard — send them straight to Pending Leaves
+  if (isHrUser(user.username)) {
+    redirect('/dashboard/pending-leaves');
   }
 
   // Fetch attendance

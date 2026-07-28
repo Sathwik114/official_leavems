@@ -44,6 +44,7 @@ export default async function DashboardLayout({ children }) {
   const showDashboardLink = !isCCC && !isHr;
   const showApproveLink = isCCC || (isApprover || isVipApplicant) && !isHr;
   const showMyLeavesLink = !isCCC && !isHr && (isMfApplicant || isAdmApplicant || isVipApplicant || isApprover);
+  const showPendingLeavesLink = isHr;
 
   return (
     <div className="dashboardShell">
@@ -78,6 +79,11 @@ export default async function DashboardLayout({ children }) {
             {showMyAttendanceLink && (
               <Link href="/dashboard/my-attendance" className="dashboardNavLink">
                 <span className="navIcon">🕒</span> My Attendance
+              </Link>
+            )}
+            {showPendingLeavesLink && (
+              <Link href="/dashboard/pending-leaves" className="dashboardNavLink">
+                <span className="navIcon">📥</span> Track Pending Leave Status
               </Link>
             )}
           </div>

@@ -5,7 +5,7 @@ export const LEAVE_ROLE_RULES = {
   },
   adm: {
     ids: ['120124', '120137', '111254'],
-    approverIds: ['230022', '140287'],
+    approverIds: ['111075', '140287'],
   },
   vip: {
     ids: ['250479','111137', '210231', '111069', '100209'],
@@ -15,7 +15,7 @@ export const LEAVE_ROLE_RULES = {
     ccc: '140287',
   },
   hr: {
-    ids: ['111075', '230506'],
+    ids: ['230022','111075', '230506'],
   }
 };
 
@@ -57,6 +57,7 @@ export function canAccessMyAttendance(userId) {
   const normalizedUserId = normalizeId(userId);
   if (!normalizedUserId) return false;
   if (isCccUser(normalizedUserId)) return false;
+  if (isHrUser(normalizedUserId)) return false;
   if (isMfPrimaryApprover(normalizedUserId)) return false;
   return true;
 }
@@ -106,9 +107,15 @@ export function getMonitorHodListEntries(userId) {
 export function getDashboardRedirectForUser(userId) {
   const normalizedUserId = normalizeId(userId);
 
-  return isCccUser(normalizedUserId) || isHrUser(normalizedUserId)
-    ? '/dashboard/monitor-hod'
-    : '/dashboard';
+  if (isHrUser(normalizedUserId)) {
+    return '/dashboard/pending-leaves';
+  }
+
+  if (isCccUser(normalizedUserId)) {
+    return '/dashboard/monitor-hod';
+  }
+
+  return '/dashboard';
 }
 
 export function getAllApplicantIds() {
