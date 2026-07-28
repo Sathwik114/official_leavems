@@ -46,6 +46,7 @@ export default function ApplyLeaveForm({ employee, currentUserUsername, approval
   const [submitError, setSubmitError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [approvalFlowDisplay, setApprovalFlowDisplay] = useState([]);
+  const [alreadyApplied, setAlreadyApplied] = useState(false);
 
   const today = new Date().toLocaleDateString('en-GB');
 
@@ -127,6 +128,30 @@ export default function ApplyLeaveForm({ employee, currentUserUsername, approval
     resolveFlowNames();
   }, [approvalFlow]);
 
+  useEffect(() => {
+    async function checkDuplicate() {
+      const applicantId = employee?.EmpCode || empcode;
+      if (!applicantId || !startDate) {
+        setAlreadyApplied(false);
+        return;
+      }
+      try {
+        const res = await fetch(`/api/leave/check-duplicate?applicantId=${encodeURIComponent(applicantId)}&startDate=${encodeURIComponent(startDate)}`);
+        const data = await res.json();
+        if (data.exists) {
+          setAlreadyApplied(true);
+          setSubmitError('Already applied for the day');
+        } else {
+          setAlreadyApplied(false);
+          setSubmitError(prev => prev === 'Already applied for the day' ? '' : prev);
+        }
+      } catch (err) {
+        console.error('Error checking duplicate leave:', err);
+      }
+    }
+    checkDuplicate();
+  }, [startDate, employee, empcode]);
+
   async function handleRelieverIdBlur() {
     const trimmedId = relieverId.trim();
     if (!trimmedId) {
@@ -183,6 +208,11 @@ export default function ApplyLeaveForm({ employee, currentUserUsername, approval
 
     if (requiresAttachment && !attachment) {
       setSubmitError('Please upload a supporting document for sick leave requests longer than one day.');
+      return;
+    }
+
+    if (alreadyApplied) {
+      setSubmitError('Already applied for the day');
       return;
     }
 
@@ -470,7 +500,7 @@ export default function ApplyLeaveForm({ employee, currentUserUsername, approval
           </div>
 
           <div className="leaveFormRow leaveFormSubmitRow">
-            <button type="submit" className="leaveSubmitButton" disabled={isSubmitting || !approvalFlow || balanceExceeded}>
+            <button type="submit" className="leaveSubmitButton" disabled={isSubmitting || !approvalFlow || balanceExceeded || alreadyApplied}>
               {isSubmitting ? 'Submitting...' : 'Submit Application'}
             </button>
           </div>

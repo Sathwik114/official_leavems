@@ -57,7 +57,7 @@ html, body {
   width: 100%;
   max-width: 100%;
   margin: 0;
-  padding: 0 5px;           /* 5px gap from screen edges, left and right */
+  padding: 0 0 0 5px;       /* table width = screen width - 5px */
   box-sizing: border-box;
   background: transparent;
   box-shadow: none;
@@ -90,6 +90,58 @@ html, body {
   box-shadow: 0 0 0 3px rgba(125, 211, 252, 0.25);
 }
 
+.tableFilterBar select {
+  padding: 0.4rem 0.6rem;
+  border-radius: 0.5rem;
+  border: 1.5px solid #cbd5e1;
+  font-size: 13px;
+  color: #334155;
+  outline: none;
+  background: #fff;
+}
+
+.tableFilterBar select:focus {
+  border-color: #7dd3fc;
+  box-shadow: 0 0 0 3px rgba(125, 211, 252, 0.25);
+}
+
+.yearFilterInput {
+  width: 5.5rem;
+  padding: 0.4rem 0.6rem;
+  border-radius: 0.5rem;
+  border: 1.5px solid #cbd5e1;
+  font-size: 13px;
+  color: #334155;
+  outline: none;
+  background: #fff;
+}
+
+.yearFilterInput:focus {
+  border-color: #7dd3fc;
+  box-shadow: 0 0 0 3px rgba(125, 211, 252, 0.25);
+}
+
+.exportExcelBtn {
+  margin-left: auto;
+  padding: 0.45rem 0.9rem;
+  border-radius: 0.5rem;
+  border: none;
+  background: #16a34a;
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.exportExcelBtn:hover:not(:disabled) {
+  background: #15803d;
+}
+
+.exportExcelBtn:disabled {
+  background: #94a3b8;
+  cursor: not-allowed;
+}
+
 .clearFilterBtn {
   padding: 0.35rem 0.7rem;
   border-radius: 0.5rem;
@@ -105,12 +157,14 @@ html, body {
   background: #e2e8f0;
 }
 
+/* Only the rows scroll (vertically). The table itself always fits the
+   container width (screen width - 5px) — no horizontal scrollbar. */
 .tableScrollWrapper {
   width: 100%;
   flex: 1;
   overflow-y: auto;
-  overflow-x: auto;
-  max-height: calc(10 * 44px + 44px);
+  overflow-x: hidden;
+  max-height: calc(15 * 44px + 44px); /* header row + 15 data rows */
   background: transparent;   /* no white container box */
   border: none;               /* no boxed border around the table */
   min-height: 0;
@@ -129,8 +183,7 @@ html, body {
 }
 
 .attendanceTable {
-  width: 100%;                   /* fits container (screen minus 5px each side) */
-  min-width: 100%;
+  width: 100%;                   /* always fits the container (screen width - 5px) */
   table-layout: fixed;
   border-collapse: collapse;
   font-size: 13px;
@@ -165,36 +218,31 @@ html, body {
   background: rgba(148, 163, 184, 0.08);
 }
 
-/* 16 columns — widths sum to 100% so the table always fits the page width */
+/* 13 columns — widths sum to 100% so the table fills wide screens
+   and shrinks proportionally (with horizontal scroll) on narrow ones */
 .attendanceTable th:nth-child(1),
-.attendanceTable td:nth-child(1) { width: 3%; }   /* S.No */
+.attendanceTable td:nth-child(1) { width: 4%; }   /* S.No */
 .attendanceTable th:nth-child(2),
-.attendanceTable td:nth-child(2) { width: 6%; }   /* Date Applied */
+.attendanceTable td:nth-child(2) { width: 8%; }   /* Date Applied */
 .attendanceTable th:nth-child(3),
-.attendanceTable td:nth-child(3) { width: 6%; }   /* Applicant ID */
+.attendanceTable td:nth-child(3) { width: 7%; }   /* Applicant ID */
 .attendanceTable th:nth-child(4),
-.attendanceTable td:nth-child(4) { width: 8%; }   /* Applicant Name */
+.attendanceTable td:nth-child(4) { width: 11%; }  /* Applicant Name */
 .attendanceTable th:nth-child(5),
-.attendanceTable td:nth-child(5) { width: 6%; }   /* Department */
+.attendanceTable td:nth-child(5) { width: 8%; }   /* Department */
 .attendanceTable th:nth-child(6),
-.attendanceTable td:nth-child(6) { width: 6%; }   /* Section */
+.attendanceTable td:nth-child(6) { width: 8%; }   /* Section */
 .attendanceTable th:nth-child(7),
-.attendanceTable td:nth-child(7) { width: 6%; }   /* Shift */
+.attendanceTable td:nth-child(7) { width: 7%; }   /* Leave Type */
 .attendanceTable th:nth-child(8),
-.attendanceTable td:nth-child(8) { width: 6%; }   /* Employee Type */
+.attendanceTable td:nth-child(8) { width: 6%; }   /* From Time */
 .attendanceTable th:nth-child(9),
-.attendanceTable td:nth-child(9) { width: 6%; }   /* Leave Type */
+.attendanceTable td:nth-child(9) { width: 6%; }   /* To Time */
 .attendanceTable th:nth-child(10),
-.attendanceTable td:nth-child(10) { width: 6%; }  /* From Time */
+.attendanceTable td:nth-child(10) { width: 8%; cursor: help; } /* Reason */
 .attendanceTable th:nth-child(11),
-.attendanceTable td:nth-child(11) { width: 6%; }  /* To Time */
+.attendanceTable td:nth-child(11) { width: 6%; }  /* Status */
 .attendanceTable th:nth-child(12),
-.attendanceTable td:nth-child(12) { width: 7%; cursor: help; } /* Reason */
+.attendanceTable td:nth-child(12) { width: 11%; } /* Attachment */
 .attendanceTable th:nth-child(13),
-.attendanceTable td:nth-child(13) { width: 6%; }  /* Status */
-.attendanceTable th:nth-child(14),
-.attendanceTable td:nth-child(14) { width: 7%; }  /* Attachment */
-.attendanceTable th:nth-child(15),
-.attendanceTable td:nth-child(15) { width: 7%; }  /* Current Approver */
-.attendanceTable th:nth-child(16),
-.attendanceTable td:nth-child(16) { width: 7%; }  /* Approved By */
+.attendanceTable td:nth-child(13) { width: 10%; } /* Current Approver */

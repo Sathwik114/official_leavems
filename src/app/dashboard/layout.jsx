@@ -7,6 +7,9 @@ import {
   isCccUser,
   isApproverUser,
   isApplicantUser,
+  isHrUser,
+  canAccessMonitorHod,
+  canAccessMyAttendance,
 } from '@/lib/leaveApprovalConfig';
 import './layout.css';
 
@@ -28,12 +31,6 @@ export default async function DashboardLayout({ children }) {
   const mfApplicantIds = LEAVE_ROLE_RULES.mf.ids || [];
   const admApplicantIds = LEAVE_ROLE_RULES.adm.ids || [];
   const vipApplicantIds = LEAVE_ROLE_RULES.vip.ids || [];
-  const approverIds = [
-    ...(LEAVE_ROLE_RULES.mf.approverIds || []),
-    ...(LEAVE_ROLE_RULES.adm.approverIds || []),
-    ...(LEAVE_ROLE_RULES.vip.approverIds || []),
-  ];
-
   const isCCC = isCccUser(currentUserId);
   const isMfApplicant = mfApplicantIds.includes(currentUserId);
   const isAdmApplicant = admApplicantIds.includes(currentUserId);
@@ -41,17 +38,19 @@ export default async function DashboardLayout({ children }) {
   const isApprover = isApproverUser(currentUserId);
   const isRoleUser = isApplicantUser(currentUserId) || isApprover;
 
-  const isHrUser = (LEAVE_ROLE_RULES.hr?.ids || []).map((id) => String(id).trim()).includes(currentUserId);
-  const showDashboardLink = !isCCC && !isHrUser;
-  const showApproveLink = isCCC || (isApprover || isVipApplicant) && !isHrUser;
-  const showMyLeavesLink = !isCCC && !isHrUser && (isMfApplicant || isAdmApplicant || isVipApplicant || isApprover);
+  const isHr = isHrUser(currentUserId);
+  const showMonitorHodLink = canAccessMonitorHod(currentUserId);
+  const showMyAttendanceLink = canAccessMyAttendance(currentUserId);
+  const showDashboardLink = !isCCC && !isHr;
+  const showApproveLink = isCCC || (isApprover || isVipApplicant) && !isHr;
+  const showMyLeavesLink = !isCCC && !isHr && (isMfApplicant || isAdmApplicant || isVipApplicant || isApprover);
 
   return (
     <div className="dashboardShell">
       <nav className="dashboardNavbar">
         <div className="dashboardNavBrand">
           <span className="dashboardNavBrandMark">GTI</span>
-          <span className="dashboardNavBrandText">Official&apos;s Leave Management System</span>
+          <span className="dashboardNavBrandText">HOD&apos;s Leave Management System</span>
         </div>
 
         <div className="dashboardNavRight">
@@ -66,14 +65,19 @@ export default async function DashboardLayout({ children }) {
                 <span className="navIcon">✅</span> Approve a Leave
               </Link>
             )}
+            {showMonitorHodLink && (
+              <Link href="/dashboard/monitor-hod" className="dashboardNavLink">
+                <span className="navIcon">📊</span> Monitor HOD&apos;s Attendance
+              </Link>
+            )}
             {showMyLeavesLink && (
               <Link href="/dashboard/my-leaves" className="dashboardNavLink">
                 <span className="navIcon">📋</span> My Leaves
               </Link>
             )}
-            {(isCCC || isHrUser) && (
-              <Link href="/dashboard/monitor-hod" className="dashboardNavLink">
-                <span className="navIcon">📊</span> Monitor HOD&apos;s Attendance
+            {showMyAttendanceLink && (
+              <Link href="/dashboard/my-attendance" className="dashboardNavLink">
+                <span className="navIcon">🕒</span> My Attendance
               </Link>
             )}
           </div>

@@ -6,6 +6,7 @@
   margin: 0;
   padding: 0 5px;
   box-sizing: border-box;
+  flex-shrink: 0;
 }
 
 .leaveApprovalMessage {
@@ -21,21 +22,40 @@
 .leaveLoadingText {
   color: #9d174d;
   font-weight: 600;
+  flex-shrink: 0;
 }
 
+/* NEW: root page container fills the viewport exactly and never
+   scrolls itself — all scrolling happens inside .leaveTableScrollWrapper. */
+.leaveFitScreenRoot {
+  height: 100dvh;
+  max-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+/* Card now grows to fill whatever vertical space is left in the
+   viewport (flex: 1) instead of being sized purely by its content.
+   The scroll wrapper inside it then fills that space and scrolls. */
 .leaveTableCard {
   position: relative;
   z-index: 1;
   width: 100%;
   max-width: 100%;
   margin: 1.25rem 0 0;
-  padding: 1.5rem 5px;
+  padding: 1rem 5px 1.5rem;
   box-sizing: border-box;
   background: #ffffff;
   border-radius: 1rem;
   border: 1px solid #fbcfe8;
   box-shadow: 0 18px 36px -18px rgba(190, 24, 93, 0.25);
-  overflow-x: auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex: 1;
+  min-height: 0;
 }
 
 .leaveTableCard h2 {
@@ -43,6 +63,7 @@
   font-size: 1.15rem;
   font-weight: 800;
   color: #075985;
+  flex-shrink: 0;
 }
 
 .leaveTableCard p {
@@ -60,11 +81,38 @@
   margin-top: 0.85rem;
   display: flex;
   gap: 0.6rem;
+  flex-shrink: 0;
+}
+
+/* Scroll wrapper fills whatever space is left inside the card
+   (driven by the viewport via .leaveFitScreenRoot / flex: 1 on the
+   card above), instead of a fixed rem cap. Only this element scrolls,
+   both vertically and horizontally — the page itself never does. */
+.leaveTableScrollWrapper {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: auto;
+  margin-bottom: 5px;
+  box-sizing: border-box;
+}
+
+.leaveTableScrollWrapper::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.leaveTableScrollWrapper::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+.leaveTableScrollWrapper::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .leaveNoScrollTable {
   width: 100%;
-  min-width: 62rem;
+  min-width: 54rem;
   border-collapse: collapse;
   font-size: 0.85rem;
 }
@@ -79,6 +127,10 @@
   color: #be185d;
   border-bottom: 2px solid #fbcfe8;
   white-space: nowrap;
+  position: sticky;
+  top: 0;
+  background: #ffffff;
+  z-index: 1;
 }
 
 .leaveNoScrollTable tbody td {
@@ -88,14 +140,21 @@
   white-space: nowrap;
 }
 
-.leaveNoScrollTable td:nth-child(2),
-.leaveNoScrollTable th:nth-child(2) {
+/* Column order (current): 1 checkbox, 2 Date Applied, 3 Applicant ID,
+   4 Applicant Name, 5 Department, 6 Section, 7 Leave Type, 8 From Time,
+   9 To Time, 10 Days, 11 Reason, 12 Attachment, 13 Current Approver,
+   14 Status, 15 Action.
+   Applicant Name (4) gets the min-width that was mistakenly on col 2;
+   Reason (11) gets the wrap-friendly min-width that was mistakenly on col 5 —
+   that mistargeting is what was causing the huge Section/Leave Type gap. */
+.leaveNoScrollTable td:nth-child(4),
+.leaveNoScrollTable th:nth-child(4) {
   min-width: 10rem;
   white-space: nowrap;
 }
 
-.leaveNoScrollTable td:nth-child(5),
-.leaveNoScrollTable th:nth-child(5) {
+.leaveNoScrollTable td:nth-child(11),
+.leaveNoScrollTable th:nth-child(11) {
   min-width: 14rem;
   white-space: normal;
   word-break: break-word;
@@ -330,11 +389,12 @@
   z-index: 1;
   width: 100%;
   max-width: 100%;
-  margin: 1.5rem 0 0;
+  margin: 0.5rem 0 0;
   padding: 0 5px;
   box-sizing: border-box;
   display: flex;
   gap: 0.75rem;
+  flex-shrink: 0;
 }
 
 .leaveTabButton {
@@ -358,6 +418,33 @@
   color: #ffffff;
   border-color: transparent;
   box-shadow: 0 8px 18px -8px rgba(190, 24, 93, 0.45);
+}
+
+/* Month / Year filter bar — now only rendered above the
+   "My Approved Requests" table (see page.js). */
+.leaveFilterBar {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 100%;
+  margin: 0.85rem 0 0;
+  padding: 0 5px;
+  box-sizing: border-box;
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.leaveFilterSelect {
+  padding: 0.45rem 0.7rem;
+  border-radius: 0.6rem;
+  border: 1px solid #fbcfe8;
+  background: #ffffff;
+  color: #be185d;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 @media (max-width: 768px) {

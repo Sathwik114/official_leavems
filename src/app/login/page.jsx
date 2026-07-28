@@ -70,7 +70,7 @@ export default function Login() {
         <div className="pageHeader">
           <center>
           <h3 className="brandName">GREENTECH INDUSTRIES</h3>
-          <p className="systemName">Officials Leave Management System</p>
+          <p className="systemName">HOD's Leave Management System</p>
           </center>
         </div>
 

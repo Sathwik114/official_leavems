@@ -5,6 +5,11 @@ import './page.css';
 import './leave-approval.css';
 import { formatApproverList, normalizeApproverList } from '@/lib/leaveUtils';
 
+const MONTH_NAMES = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+
 export default function LeaveApprovalsPage() {
   const [pendingApprovals, setPendingApprovals] = useState([]);
   const [approvedRequests, setApprovedRequests] = useState([]);
@@ -13,6 +18,8 @@ export default function LeaveApprovalsPage() {
   const [expandedId, setExpandedId] = useState(null);
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [activeTab, setActiveTab] = useState('pending');
+  const [monthFilter, setMonthFilter] = useState('all');
+  const [yearFilter, setYearFilter] = useState('all');
 
   async function loadData() {
     setLoading(true);
@@ -77,10 +84,26 @@ export default function LeaveApprovalsPage() {
     return () => clearTimeout(timer);
   }, []);
 
+  function getDateValue(request) {
+    return request.DateApplied || request.CreatedAt || request.StartDate;
+  }
+
   function formatApplicationDate(request) {
-    const value = request.DateApplied || request.CreatedAt || request.StartDate;
+    const value = getDateValue(request);
     if (!value || Number.isNaN(new Date(value).getTime())) return '-';
     return new Date(value).toLocaleDateString('en-GB');
+  }
+
+  function filterByMonthYear(list) {
+    if (monthFilter === 'all' && yearFilter === 'all') return list;
+    return list.filter((r) => {
+      const val = getDateValue(r);
+      const d = val ? new Date(val) : null;
+      if (!d || Number.isNaN(d.getTime())) return false;
+      const monthOk = monthFilter === 'all' || d.getMonth() === Number(monthFilter);
+      const yearOk = yearFilter === 'all' || d.getFullYear() === Number(yearFilter);
+      return monthOk && yearOk;
+    });
   }
 
   const renderRequestRow = (request, isPending = true, index = 0) => {
@@ -98,8 +121,6 @@ export default function LeaveApprovalsPage() {
         <td>{request.ApplicantName || '-'}</td>
         <td>{request.Department || '-'}</td>
         <td>{request.Section || '-'}</td>
-        <td>{request.Shift || '-'}</td>
-        <td>{request.EmpType || '-'}</td>
         <td>{request.LeaveType}</td>
         <td>{request.FromTime || '-'}</td>
         <td>{request.ToTime || '-'}</td>
@@ -120,7 +141,6 @@ export default function LeaveApprovalsPage() {
           )}
         </td>
         <td>{request.CurrentApprover || '-'}</td>
-        <td>{formatApproverList(request.ApprovedBy)}</td>
         <td>{request.Status}</td>
         <td>
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -136,6 +156,20 @@ export default function LeaveApprovalsPage() {
   const combined = pendingApprovals.concat(approvedRequests || []);
   const uniqueById = Array.from(new Map(combined.map((r) => [r.Id, r])).values());
   const activeRequest = expandedId ? uniqueById.find((r) => r.Id === expandedId) : null;
+
+  const filteredApproved = filterByMonthYear(approvedRequests);
+
+  const availableYears = Array.from(
+    new Set(
+      combined
+        .map((r) => {
+          const val = getDateValue(r);
+          const d = val ? new Date(val) : null;
+          return d && !Number.isNaN(d.getTime()) ? d.getFullYear() : null;
+        })
+        .filter(Boolean)
+    )
+  ).sort((a, b) => b - a);
 
   async function handleApproveDetail() {
     if (!activeRequest) return;
@@ -184,7 +218,7 @@ export default function LeaveApprovalsPage() {
   const isActionableRequest = Boolean(activeRequest && !['APPROVED', 'REJECTED'].includes(String(activeRequest.Status || '').toUpperCase()));
 
   return (
-    <div className="dashboardPage">
+    <div className="dashboardPage leaveFitScreenRoot">
       <div className="dashboardBlob dashboardBlobOne" />
       <div className="dashboardBlob dashboardBlobTwo" />
 
@@ -205,6 +239,31 @@ export default function LeaveApprovalsPage() {
         </button>
       </div>
 
+      {activeTab === 'approved' && (
+        <div className="leaveFilterBar">
+          <select
+            className="leaveFilterSelect"
+            value={monthFilter}
+            onChange={(e) => setMonthFilter(e.target.value)}
+          >
+            <option value="all">All Months</option>
+            {MONTH_NAMES.map((m, i) => (
+              <option key={m} value={i}>{m}</option>
+            ))}
+          </select>
+          <select
+            className="leaveFilterSelect"
+            value={yearFilter}
+            onChange={(e) => setYearFilter(e.target.value)}
+          >
+            <option value="all">All Years</option>
+            {availableYears.map((y) => (
+              <option key={y} value={y}>{y}</option>
+            ))}
+          </select>
+        </div>
+      )}
+
       <div className="leaveApprovalMessageWrap">
         {message && <p className="leaveApprovalMessage">{message}</p>}
       </div>
@@ -220,35 +279,38 @@ export default function LeaveApprovalsPage() {
                 <p>No pending approvals.</p>
               ) : (
                 <>
-                  <table className="leaveNoScrollTable">
-                    <thead>
-                      <tr>
-                        <th style={{ width: '40px', textAlign: 'center' }}>
-                          <input type="checkbox" checked={selectedIds.size === pendingApprovals.length && pendingApprovals.length > 0} onChange={selectAllToggle} />
-                        </th>
-                        <th>Date Applied</th>
-                        <th>Applicant ID</th>
-                        <th>Applicant Name</th>
-                        <th>Department</th>
-                        <th>Section</th>
-                        <th>Shift</th>
-                        <th>Employee Type</th>
-                        <th>Leave Type</th>
-                        <th>From Time</th>
-                        <th>To Time</th>
-                        <th>Days</th>
-                        <th>Reason</th>
-                        <th>Attachment</th>
-                        <th>Current Approver</th>
-                        <th>Approved By</th>
-                        <th>Status</th>
-                        <th>Action</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {pendingApprovals.map((request, index) => renderRequestRow(request, true, index))}
-                    </tbody>
-                  </table>
+                  <div className="leaveTableScrollWrapper">
+                    <table className="leaveNoScrollTable">
+                      <thead>
+                        <tr>
+                          <th style={{ width: '40px', textAlign: 'center' }}>
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.size === pendingApprovals.length && pendingApprovals.length > 0}
+                              onChange={selectAllToggle}
+                            />
+                          </th>
+                          <th>Date Applied</th>
+                          <th>Applicant ID</th>
+                          <th>Applicant Name</th>
+                          <th>Department</th>
+                          <th>Section</th>
+                          <th>Leave Type</th>
+                          <th>From Time</th>
+                          <th>To Time</th>
+                          <th>Days</th>
+                          <th>Reason</th>
+                          <th>Attachment</th>
+                          <th>Current Approver</th>
+                          <th>Status</th>
+                          <th>Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {pendingApprovals.map((request, index) => renderRequestRow(request, true, index))}
+                      </tbody>
+                    </table>
+                  </div>
                   <div className="leaveBulkActionsRow">
                     <button className="applyLeaveButton" disabled={selectedIds.size === 0} onClick={() => handleBulkAction('APPROVED')}>Approve Selected</button>
                   </div>
@@ -260,35 +322,34 @@ export default function LeaveApprovalsPage() {
           {activeTab === 'approved' && (
             <div className="leaveTableCard leaveApprovedCard">
               <h2>My Approved Requests</h2>
-              {approvedRequests.length === 0 ? (
+              {filteredApproved.length === 0 ? (
                 <p>No approved requests yet.</p>
               ) : (
-                <table className="leaveNoScrollTable">
-                  <thead>
-                    <tr>
-                      <th>Date Applied</th>
-                      <th>Applicant ID</th>
-                      <th>Applicant Name</th>
-                      <th>Department</th>
-                      <th>Section</th>
-                      <th>Shift</th>
-                      <th>Employee Type</th>
-                      <th>Leave Type</th>
-                      <th>From Time</th>
-                      <th>To Time</th>
-                      <th>Days</th>
-                      <th>Reason</th>
-                      <th>Attachment</th>
-                      <th>Current Approver</th>
-                      <th>Approved By</th>
-                      <th>Status</th>
-                      <th>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {approvedRequests.map((request, index) => renderRequestRow(request, false, index))}
-                  </tbody>
-                </table>
+                <div className="leaveTableScrollWrapper">
+                  <table className="leaveNoScrollTable">
+                    <thead>
+                      <tr>
+                        <th>Date Applied</th>
+                        <th>Applicant ID</th>
+                        <th>Applicant Name</th>
+                        <th>Department</th>
+                        <th>Section</th>
+                        <th>Leave Type</th>
+                        <th>From Time</th>
+                        <th>To Time</th>
+                        <th>Days</th>
+                        <th>Reason</th>
+                        <th>Attachment</th>
+                        <th>Current Approver</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredApproved.map((request, index) => renderRequestRow(request, false, index))}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </div>
           )}

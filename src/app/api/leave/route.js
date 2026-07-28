@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import * as jose from 'jose';
-import { createLeaveRequestWithInitialApproval, getPendingApprovalsForUser, getApprovedRequestsForApprover, getLeaveRequestsForApplicant } from '@/lib/leaveDb';
+import { createLeaveRequestWithInitialApproval, getPendingApprovalsForUser, getApprovedRequestsForApprover, getLeaveRequestsForApplicant, hasDuplicateLeaveRequest } from '@/lib/leaveDb';
 import { getLeaveApprovalFlow } from '@/lib/leaveApprovalConfig';
 import { getEmployeeDetails } from '@/lib/payrollDb';
 import { getUserEmail, sendMail, buildLeaveRequestEmailContent, getApprovalLink, getDirectApproveLink, getDirectRejectLink } from '@/lib/mail';
@@ -68,6 +68,14 @@ export async function POST(request) {
     if (!applicantId || !startDate || !endDate || !reason) {
       return NextResponse.json(
         { error: 'Applicant id, dates, and reason are required.' },
+        { status: 400 }
+      );
+    }
+
+    const isDuplicate = await hasDuplicateLeaveRequest(applicantId, startDate);
+    if (isDuplicate) {
+      return NextResponse.json(
+        { error: 'Already applied for the day' },
         { status: 400 }
       );
     }

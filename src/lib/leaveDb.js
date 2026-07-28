@@ -1092,3 +1092,23 @@ export async function getAllLeaveApprovals() {
 
   return result.recordset || [];
 }
+
+export async function hasDuplicateLeaveRequest(applicantId, startDate) {
+  await ensureLeaveTables();
+  const pool = await getPool();
+
+  const result = await pool.request()
+    .input('ApplicantId', sql.NVarChar, String(applicantId || '').trim())
+    .input('StartDate', sql.DateTime, new Date(startDate))
+    .query(`
+      SELECT COUNT(*) as count
+      FROM dbo.LeaveRequests
+      WHERE ApplicantId = @ApplicantId
+        AND DATEDIFF(day, StartDate, @StartDate) = 0
+        AND Status <> 'REJECTED';
+    `);
+
+  return (result.recordset[0]?.count || 0) > 0;
+}
+
+

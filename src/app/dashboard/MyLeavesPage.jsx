@@ -2,7 +2,7 @@
 
 import './MyLeavesPage.css';
 import { useEffect, useState, useMemo } from 'react';
-import { formatApproverList } from '@/lib/leaveUtils';
+import * as XLSX from 'xlsx';
 
 function truncateReason(reason) {
   if (!reason) return '-';
@@ -21,6 +21,8 @@ export default function MyLeavesPage() {
   const [myRequests, setMyRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [dateFilter, setDateFilter] = useState('');
+  const [monthFilter, setMonthFilter] = useState('');
+  const [yearFilter, setYearFilter] = useState('');
 
   useEffect(() => {
     async function loadData() {
@@ -41,18 +43,86 @@ export default function MyLeavesPage() {
     loadData();
   }, []);
 
+  const yearOptions = useMemo(() => {
+    const years = new Set();
+    myRequests.forEach((request) => {
+      const requestDateValue = request.DateApplied || request.CreatedAt || request.StartDate;
+      if (!requestDateValue) return;
+      const requestDate = new Date(requestDateValue);
+      if (Number.isNaN(requestDate.getTime())) return;
+      years.add(requestDate.getFullYear());
+    });
+    return Array.from(years).sort((a, b) => b - a);
+  }, [myRequests]);
+
   const filteredRequests = useMemo(() => {
-    if (!dateFilter) return myRequests;
     return myRequests.filter((request) => {
       const requestDateValue = request.DateApplied || request.CreatedAt || request.StartDate;
       if (!requestDateValue) return false;
       const requestDate = new Date(requestDateValue);
       if (Number.isNaN(requestDate.getTime())) return false;
-      return requestDate.toISOString().split('T')[0] === dateFilter;
+
+      if (dateFilter && requestDate.toISOString().split('T')[0] !== dateFilter) {
+        return false;
+      }
+      if (monthFilter && String(requestDate.getMonth() + 1).padStart(2, '0') !== monthFilter) {
+        return false;
+      }
+      if (yearFilter && String(requestDate.getFullYear()) !== yearFilter) {
+        return false;
+      }
+      return true;
     });
-  }, [myRequests, dateFilter]);
+  }, [myRequests, dateFilter, monthFilter, yearFilter]);
+
+  const hasActiveFilters = dateFilter || monthFilter || yearFilter;
+  const clearAllFilters = () => {
+    setDateFilter('');
+    setMonthFilter('');
+    setYearFilter('');
+  };
+
+  const monthOptions = [
+    { value: '01', label: 'January' },
+    { value: '02', label: 'February' },
+    { value: '03', label: 'March' },
+    { value: '04', label: 'April' },
+    { value: '05', label: 'May' },
+    { value: '06', label: 'June' },
+    { value: '07', label: 'July' },
+    { value: '08', label: 'August' },
+    { value: '09', label: 'September' },
+    { value: '10', label: 'October' },
+    { value: '11', label: 'November' },
+    { value: '12', label: 'December' },
+  ];
 
   const totalRows = filteredRequests.length;
+
+  const handleExportExcel = () => {
+    const exportRows = filteredRequests.map((request, index) => ({
+      'S.No': totalRows - index,
+      'Date Applied': formatDisplayDate(request.DateApplied || request.CreatedAt || request.StartDate),
+      'Applicant ID': request.ApplicantId || '-',
+      'Applicant Name': request.ApplicantName || '-',
+      'Department': request.Department || '-',
+      'Section': request.Section || '-',
+      'Leave Type': request.LeaveType || '-',
+      'From Time': request.FromTime || '-',
+      'To Time': request.ToTime || '-',
+      'Reason': request.Reason || '-',
+      'Status': request.Status || '-',
+      'Attachment': request.AttachmentName || '-',
+      'Current Approver': request.CurrentApprover || '-',
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(exportRows);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'My Leaves');
+
+    const today = new Date().toISOString().split('T')[0];
+    XLSX.writeFile(workbook, `my-leaves-${today}.xlsx`);
+  };
 
   return (
     <div className="dashboardPage">
@@ -72,11 +142,54 @@ export default function MyLeavesPage() {
             value={dateFilter}
             onChange={(e) => setDateFilter(e.target.value)}
           />
-          {dateFilter && (
-            <button type="button" onClick={() => setDateFilter('')} className="clearFilterBtn">
+
+          <label htmlFor="monthFilter">Month:</label>
+          <select
+            id="monthFilter"
+            value={monthFilter}
+            onChange={(e) => setMonthFilter(e.target.value)}
+          >
+            <option value="">All</option>
+            {monthOptions.map((m) => (
+              <option key={m.value} value={m.value}>
+                {m.label}
+              </option>
+            ))}
+          </select>
+
+          <label htmlFor="yearFilter">Year:</label>
+          <input
+            type="text"
+            id="yearFilter"
+            list="yearOptionsList"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            maxLength={4}
+            placeholder="e.g. 2026"
+            value={yearFilter}
+            onChange={(e) => setYearFilter(e.target.value.replace(/[^0-9]/g, ''))}
+            className="yearFilterInput"
+          />
+          <datalist id="yearOptionsList">
+            {yearOptions.map((y) => (
+              <option key={y} value={y} />
+            ))}
+          </datalist>
+
+          {hasActiveFilters && (
+            <button type="button" onClick={clearAllFilters} className="clearFilterBtn">
               Clear
             </button>
           )}
+
+          <button
+            type="button"
+            onClick={handleExportExcel}
+            className="exportExcelBtn"
+            disabled={filteredRequests.length === 0}
+          >
+            Download Excel
+          </button>
         </div>
 
         {loading ? (
@@ -94,8 +207,6 @@ export default function MyLeavesPage() {
                   <th>Applicant Name</th>
                   <th>Department</th>
                   <th>Section</th>
-                  <th>Shift</th>
-                  <th>Employee Type</th>
                   <th>Leave Type</th>
                   <th>From Time</th>
                   <th>To Time</th>
@@ -103,7 +214,6 @@ export default function MyLeavesPage() {
                   <th>Status</th>
                   <th>Attachment</th>
                   <th>Current Approver</th>
-                  <th>Approved By</th>
                 </tr>
               </thead>
               <tbody>
@@ -115,8 +225,6 @@ export default function MyLeavesPage() {
                     <td>{request.ApplicantName || '-'}</td>
                     <td>{request.Department || '-'}</td>
                     <td>{request.Section || '-'}</td>
-                    <td>{request.Shift || '-'}</td>
-                    <td>{request.EmpType || '-'}</td>
                     <td>{request.LeaveType}</td>
                     <td>{request.FromTime || '-'}</td>
                     <td>{request.ToTime || '-'}</td>
@@ -137,7 +245,6 @@ export default function MyLeavesPage() {
                       )}
                     </td>
                     <td>{request.CurrentApprover || '-'}</td>
-                    <td>{formatApproverList(request.ApprovedBy)}</td>
                   </tr>
                 ))}
               </tbody>

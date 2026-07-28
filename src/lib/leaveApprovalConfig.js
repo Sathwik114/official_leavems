@@ -29,11 +29,86 @@ export function isCccUser(userId) {
   return normalizeId(userId) === getCccUserId();
 }
 
+export function isHrUser(userId) {
+  return (LEAVE_ROLE_RULES.hr?.ids || []).map(normalizeId).includes(normalizeId(userId));
+}
+
+export function isMfPrimaryApprover(userId) {
+  const primaryApproverId = normalizeId(LEAVE_ROLE_RULES.mf?.approverIds?.[0]);
+  return Boolean(primaryApproverId) && normalizeId(userId) === primaryApproverId;
+}
+
+export function isAdmPrimaryApprover(userId) {
+  const primaryApproverId = normalizeId(LEAVE_ROLE_RULES.adm?.approverIds?.[0]);
+  return Boolean(primaryApproverId) && normalizeId(userId) === primaryApproverId;
+}
+
+export function canAccessMonitorHod(userId) {
+  const normalizedUserId = normalizeId(userId);
+  return (
+    isCccUser(normalizedUserId) ||
+    isHrUser(normalizedUserId) ||
+    isMfPrimaryApprover(normalizedUserId) ||
+    isAdmPrimaryApprover(normalizedUserId)
+  );
+}
+
+export function canAccessMyAttendance(userId) {
+  const normalizedUserId = normalizeId(userId);
+  if (!normalizedUserId) return false;
+  if (isCccUser(normalizedUserId)) return false;
+  if (isMfPrimaryApprover(normalizedUserId)) return false;
+  return true;
+}
+
+function appendMonitorHodEntries(entries, ids, roleLabel) {
+  for (const id of ids || []) {
+    const normalizedId = normalizeId(id);
+    if (!normalizedId) continue;
+    entries.push({ id: normalizedId, name: `${normalizedId} - ${roleLabel}` });
+  }
+}
+
+export function getMonitorHodListEntries(userId) {
+  const normalizedUserId = normalizeId(userId);
+
+  if (isCccUser(normalizedUserId) || isHrUser(normalizedUserId)) {
+    const entries = [];
+    appendMonitorHodEntries(entries, LEAVE_ROLE_RULES.mf.ids, 'MF');
+    appendMonitorHodEntries(entries, LEAVE_ROLE_RULES.adm.ids, 'ADM');
+    appendMonitorHodEntries(entries, LEAVE_ROLE_RULES.vip.ids, 'VIP');
+    return entries;
+  }
+
+  if (isMfPrimaryApprover(normalizedUserId)) {
+    const entries = [];
+    appendMonitorHodEntries(entries, LEAVE_ROLE_RULES.mf.ids, 'MF');
+    return entries;
+  }
+
+  if (isAdmPrimaryApprover(normalizedUserId)) {
+    const hiddenIds = new Set(['100209'].map(normalizeId));
+    const entries = [];
+    appendMonitorHodEntries(entries, LEAVE_ROLE_RULES.adm.ids, 'ADM');
+    appendMonitorHodEntries(entries, LEAVE_ROLE_RULES.vip.ids, 'VIP');
+    const seen = new Set();
+    return entries.filter((entry) => {
+      if (hiddenIds.has(entry.id)) return false;
+      if (seen.has(entry.id)) return false;
+      seen.add(entry.id);
+      return true;
+    });
+  }
+
+  return [];
+}
+
 export function getDashboardRedirectForUser(userId) {
   const normalizedUserId = normalizeId(userId);
-  const isHrUser = (LEAVE_ROLE_RULES.hr?.ids || []).map(normalizeId).includes(normalizedUserId);
 
-  return isCccUser(normalizedUserId) || isHrUser ? '/dashboard/monitor-hod' : '/dashboard';
+  return isCccUser(normalizedUserId) || isHrUser(normalizedUserId)
+    ? '/dashboard/monitor-hod'
+    : '/dashboard';
 }
 
 export function getAllApplicantIds() {

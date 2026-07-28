@@ -1,10 +1,13 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import * as jose from 'jose';
-import { canAccessMonitorHod, getMonitorHodListEntries } from '@/lib/leaveApprovalConfig';
-import MonitorHodPage from '../MonitorHodPage';
+import {
+  canAccessMyAttendance,
+  getDashboardRedirectForUser,
+} from '@/lib/leaveApprovalConfig';
+import MyAttendancePage from '../MyAttendancePage';
 
-export default async function MonitorHodRoutePage() {
+export default async function MyAttendanceRoutePage() {
   const cookieStore = await cookies();
   const token = cookieStore.get('auth_token')?.value;
   let currentUserId = '';
@@ -19,11 +22,9 @@ export default async function MonitorHodRoutePage() {
     }
   }
 
-  if (!canAccessMonitorHod(currentUserId)) {
-    redirect('/dashboard');
+  if (!canAccessMyAttendance(currentUserId)) {
+    redirect(getDashboardRedirectForUser(currentUserId));
   }
 
-  const hodList = getMonitorHodListEntries(currentUserId);
-
-  return <MonitorHodPage hodList={hodList} />;
+  return <MyAttendancePage empcode={currentUserId} />;
 }

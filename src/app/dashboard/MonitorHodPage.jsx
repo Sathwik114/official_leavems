@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { LEAVE_ROLE_RULES } from '@/lib/leaveApprovalConfig';
 import './monitorhod.css';
 
 async function fetchEmployeeProfile(empcode) {
@@ -25,13 +24,7 @@ function sortLeaveDesc(records) {
   return [...records].sort((a, b) => new Date(b.FromDate) - new Date(a.FromDate));
 }
 
-const ALL_HOD_IDS = [
-  ...LEAVE_ROLE_RULES.mf.ids.map((id) => ({ id, name: `${id} - MF` })),
-  ...LEAVE_ROLE_RULES.adm.ids.map((id) => ({ id, name: `${id} - ADM` })),
-  ...LEAVE_ROLE_RULES.vip.ids.map((id) => ({ id, name: `${id} - VIP` })),
-];
-
-export default function MonitorHodPage() {
+export default function MonitorHodPage({ hodList = [] }) {
   // viewMode: 'list' | 'attendance' | 'leave'
   const [viewMode, setViewMode] = useState('list');
   const [selectedEmpCode, setSelectedEmpCode] = useState('');
@@ -102,7 +95,7 @@ export default function MonitorHodPage() {
   useEffect(() => {
     async function loadProfiles() {
       const profiles = {};
-      for (const hod of ALL_HOD_IDS) {
+      for (const hod of hodList) {
         const profile = await fetchEmployeeProfile(hod.id);
         profiles[hod.id] = profile;
       }
@@ -110,7 +103,7 @@ export default function MonitorHodPage() {
     }
 
     loadProfiles();
-  }, []);
+  }, [hodList]);
 
   useEffect(() => {
     if (selectedEmpCode && viewMode === 'attendance') {
@@ -244,7 +237,7 @@ export default function MonitorHodPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {ALL_HOD_IDS.map((hod) => {
+                  {hodList.map((hod) => {
                     const profile = hodProfiles[hod.id];
                     return (
                       <tr key={hod.id}>
