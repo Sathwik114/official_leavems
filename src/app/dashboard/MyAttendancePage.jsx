@@ -128,8 +128,8 @@ export default function MyAttendancePage({ empcode }) {
       // Vertical divider between the two header columns
       doc.line(pageCenterX, headerBoxTop, pageCenterX, headerBoxBottom);
 
-      const labelColor = [20, 20, 20];
-      const valueColor = [20, 20, 20];
+      const labelColor = [0, 0, 0];
+      const valueColor = [0, 0, 0];
 
       const col1X = marginX + 10;
       const col2X = pageCenterX + 10;
@@ -139,24 +139,24 @@ export default function MyAttendancePage({ empcode }) {
       doc.setFontSize(8.5);
 
       // Row 1: Employee ID | Employee Name
-      doc.setFont(undefined, 'normal');
+      doc.setFont(undefined, 'bold');
       doc.setTextColor(...labelColor);
       doc.text('Employee ID :', col1X, rowY);
       doc.text('Employee Name :', col2X, rowY);
 
-      doc.setFont(undefined, 'bold');
+      doc.setFont(undefined, 'normal');
       doc.setTextColor(...valueColor);
       doc.text(String(idLabel), col1X + 65, rowY);
       doc.text(String(nameLabel), col2X + 80, rowY);
 
       // Row 2: Department | Month
       rowY += rowGap;
-      doc.setFont(undefined, 'normal');
+      doc.setFont(undefined, 'bold');
       doc.setTextColor(...labelColor);
       doc.text('Department :', col1X, rowY);
       doc.text('Month :', col2X, rowY);
 
-      doc.setFont(undefined, 'bold');
+      doc.setFont(undefined, 'normal');
       doc.setTextColor(...valueColor);
       doc.text(String(deptLabel), col1X + 65, rowY);
       doc.text(monthLabel, col2X + 80, rowY);
@@ -366,7 +366,7 @@ export default function MyAttendancePage({ empcode }) {
       // ---- Footer: "GREENTECH INDUSTRIES HR", 10pt from bottom ----
       doc.setFontSize(footerFontSize);
       doc.setFont(undefined, 'normal');
-      doc.setTextColor(130, 130, 130);
+      doc.setTextColor(20, 20, 20);
       doc.text(footerText, pageCenterX, footerBaselineY, { align: 'center' });
 
       // "Page 1 of 1" — bottom-right corner, same baseline as the footer text above.
