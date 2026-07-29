@@ -412,9 +412,7 @@ export default function ApplyLeaveForm({ employee, currentUserUsername, approval
                   <option value="EL">EL</option>
                   <option value="SL">SL</option>
                   <option value="LWP">LWP</option>
-                  <option value="COFF">COFF</option>
                   <option value="OD">OD</option>
-                  <option value="1Hour">1 Hour</option>
                 </select>
               </div>
 

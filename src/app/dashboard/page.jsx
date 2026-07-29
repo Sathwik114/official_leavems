@@ -94,7 +94,12 @@ export default async function Dashboard() {
         {attendance.length === 0 ? (
           <p>No attendance records found.</p>
         ) : (
-          <AttendanceTable attendance={attendanceWithEmployeeNames} canApplyLeave={!isCccUser(user.username)} />
+          <AttendanceTable
+            empcode={String(user.username)}
+            employee={currentEmployee}
+            attendance={attendanceWithEmployeeNames}
+            canApplyLeave={!isCccUser(user.username)}
+          />
         )}
       </div>
 

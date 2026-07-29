@@ -53,6 +53,49 @@ export async function getAttendance(empcode) {
   return result.recordset;
 }
 
+export async function getPreviousMonthEndRows(empcode) {
+  const pool = await getPool();
+  const today = new Date();
+  const prevDate = new Date(today.getFullYear(), today.getMonth(), 0);
+  const prevMonth = String(prevDate.getMonth() + 1).padStart(2, '0');
+  const prevYear = prevDate.getFullYear();
+  const prevTableName = `CAP${prevMonth}${prevYear}`;
+
+  const existsResult = await pool
+    .request()
+    .input('tableName', sql.NVarChar, prevTableName)
+    .query(`
+      SELECT 1
+      FROM INFORMATION_SCHEMA.TABLES
+      WHERE TABLE_SCHEMA = 'dbo'
+        AND TABLE_NAME = @tableName;
+    `);
+
+  if (existsResult.recordset.length === 0) {
+    return [];
+  }
+
+  const result = await pool
+    .request()
+    .input('empcode', sql.NVarChar, String(empcode))
+    .query(`
+      SELECT TOP 3
+        Empcode,
+        DesigCode,
+        AttDate,
+        AttType,
+        InTime,
+        ActInTime,
+        OutTime,
+        ActOutTime
+      FROM dbo.[${prevTableName}]
+      WHERE Empcode = @empcode
+      ORDER BY AttDate DESC
+    `);
+
+  return result.recordset;
+}
+
 export async function getAttendanceData(empcode, month, year) {
   try {
     const pool = await getPool();
@@ -161,9 +204,21 @@ export async function getMorningLateByForDate(empcode, attendanceDate) {
   return maxValue > 5 && maxValue <= 60 ? maxValue : null;
 }
 
+function getAttendanceTableNameForDate(attendanceDate) {
+  const dateStr = typeof attendanceDate === 'string'
+    ? attendanceDate.slice(0, 10)
+    : new Date(attendanceDate).toISOString().slice(0, 10);
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    throw new Error('A valid attendance date is required.');
+  }
+
+  const [year, month] = dateStr.split('-');
+  return `CAP${month}${year}`;
+}
+
 function getCurrentAttendanceTableName() {
-  const now = new Date();
-  return `CAP${String(now.getMonth() + 1).padStart(2, '0')}${now.getFullYear()}`;
+  return getAttendanceTableNameForDate(new Date());
 }
 
 export async function updateAttendanceTime(empcode, attendanceDate, timeField, timeValue) {
@@ -182,7 +237,7 @@ export async function updateAttendanceTime(empcode, attendanceDate, timeField, t
   }
 
   const pool = await getPool();
-  const tableName = getCurrentAttendanceTableName();
+  const tableName = getAttendanceTableNameForDate(attendanceDate);
   const typeResult = await pool.request()
     .input('TableName', sql.NVarChar, tableName)
     .query(`
