@@ -1,12 +1,30 @@
+/* The page itself never scrolls — only the table body does, once it
+   passes 15 rows. Scrollbar is hidden everywhere at the page level. */
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  scrollbar-width: none;      /* Firefox */
+  -ms-overflow-style: none;   /* old Edge/IE */
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  display: none;               /* Chrome/Safari/Edge */
+}
+
 .dashboardPage {
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  min-height: 100vh;
-  padding: 2.5rem 1rem;
+  flex: 1;              /* was: height: 100vh — now fills whatever height dashboardShell has left after the navbar */
+  min-height: 0;         /* add this — lets it shrink so overflow:hidden + the table's internal scroll behave correctly */
+  padding: 2rem 1.25rem 5px 1.25rem;
   background: linear-gradient(160deg, #fdf2f8 0%, #fce7f3 50%, #fbcfe8 100%);
   overflow: hidden;
+  box-sizing: border-box;
 }
 
 .dashboardBlob {
@@ -35,7 +53,10 @@
 }
 
 .dashboardShell {
-  min-height: 100vh;
+  height: 100vh;              /* was: min-height: 100vh — min-height alone doesn't cap navbar+page to one viewport */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   background: linear-gradient(160deg, #fdf2f8 0%, #fce7f3 50%, #fbcfe8 100%);
 }
 
@@ -100,7 +121,8 @@
   z-index: 1;
   display: flex;
   justify-content: center;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
+  flex-shrink: 0;
 }
 
 .dashboardAvatarInner {
@@ -133,20 +155,21 @@
   position: relative;
   z-index: 1;
   text-align: center;
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
+  flex-shrink: 0;             /* keeps its natural height, never gets squashed by the flex table area */
 }
 
 .dashboardHeaderTitle {
   margin: 0;
-  font-size: 2.1rem;
+  font-size: 2rem;
   font-weight: 800;
   color: #075985;
 }
 
 .dashboardHeaderText {
-  margin-top: 0.6rem;
+  margin-top: 0.5rem;
   color: #9d174d;
-  font-size: 0.95rem;
+  font-size: 0.92rem;
   font-weight: 500;
 }
 
@@ -154,24 +177,50 @@
   position: relative;
   z-index: 1;
   width: 100%;
-  max-width: 72rem;          /* widened from 56rem so more columns fit naturally */
-  background: #ffffff;
-  border-radius: 1rem;
+  max-width: 100%;
+  flex: 1;                    /* fills the remaining vertical space below the header */
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  /* Subtle card instead of a heavy boxed container — professional but not
+     a solid opaque block sitting apart from the page background. */
+  background: rgba(255, 255, 255, 0.55);
   border: 1px solid #fbcfe8;
-  padding: 1.5rem;
-  box-shadow: 0 18px 36px -18px rgba(190, 24, 93, 0.25);
+  border-radius: 1rem;
+  box-shadow: 0 18px 36px -22px rgba(190, 24, 93, 0.35);
+  padding: 1.25rem 1.25rem 0 1.25rem;
   box-sizing: border-box;
+  overflow: hidden;
+}
+
+.dashboardAttendance h2 {
+  margin: 0 0 0.9rem 0;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #075985;
+  flex-shrink: 0;
+}
+
+/* --- Fixed row height so the header and each body row line up cleanly --- */
+:root {
+  --att-row-height: 2.6rem;   /* body row height */
+  --att-head-height: 2.6rem;  /* header row height */
 }
 
 .dashboardAttendanceTableWrap {
-  margin-top: 0.5rem;
-  overflow-x: auto;        /* was: hidden */
+  overflow-x: auto;
   overflow-y: auto;
-  max-height: 28rem;
+  /* No fixed row-count cap here anymore — that was sometimes taller/shorter
+     than the space actually available, which clipped the last row(s)
+     instead of scrolling them. flex:1 + min-height:0 makes this element
+     fill exactly the remaining vertical space (down to the page's 5px
+     bottom padding), and its own scrollbar handles anything beyond that. */
+  flex: 1;
+  min-height: 0;
   border: 1px solid #fce7f3;
-  border-radius: 0.8rem;
+  border-radius: 0.75rem;
+  background: #ffffff;
 }
-
 
 .dashboardAttendanceTableWrap::-webkit-scrollbar {
   width: 8px;
@@ -187,52 +236,67 @@
   border-radius: 999px;
 }
 
-.dashboardAttendance h2 {
-  margin: 0 0 1rem 0;
-  font-size: 1.15rem;
-  font-weight: 800;
-  color: #075985;
-}
-
 .dashboardAttendance table {
   width: 100%;
-  table-layout: auto;      /* was: fixed */
+  table-layout: auto;
   border-collapse: collapse;
-  font-size: 0.9rem;
+  font-size: 0.88rem;
 }
 
 .dashboardAttendance thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  height: var(--att-head-height);
   text-align: left;
-  padding: 0.65rem 0.75rem;
-  font-size: 0.75rem;
+  padding: 0 0.9rem;
+  font-size: 0.74rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.03em;
-  color: #be185d;
-  border-bottom: 2px solid #fbcfe8;
-  white-space: normal;       /* was: nowrap — let headers wrap instead of forcing width */
-  word-break: break-word;
+  letter-spacing: 0.04em;
+  color: #ffffff;
+  background: #9d174d;
+  white-space: nowrap;
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.dashboardAttendance tbody tr {
+  height: var(--att-row-height);
+}
+
+.dashboardAttendance tbody tr:nth-child(odd) {
+  background: #ffffff;
+}
+
+.dashboardAttendance tbody tr:nth-child(even) {
+  background: #fdf2f8;
+}
+
+.dashboardAttendance tbody tr:hover {
+  background: #fce7f3;
 }
 
 .dashboardAttendance tbody td {
-  padding: 0.65rem 0.75rem;
+  padding: 0 0.9rem;
   color: #374151;
-  border-bottom: 1px solid #fce7f3;
-  white-space: normal;       /* was: nowrap — let long values wrap to a second line */
-  word-break: break-word;
-  overflow-wrap: break-word;
+  border-bottom: 1px solid #f3d6e8;
+  white-space: nowrap;
+}
+
+.dashboardAttendance tbody tr:last-child td {
+  border-bottom: none;
 }
 
 .dashboardAttendance tbody td .applyLeaveButton {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0.4rem 0.9rem;
+  padding: 0.35rem 0.85rem;
   border-radius: 0.6rem;
   border: none;
   background: linear-gradient(135deg, #38bdf8, #f472b6);
   color: #ffffff;
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
@@ -251,14 +315,6 @@
   box-shadow: 0 4px 10px -6px rgba(190, 24, 93, 0.4);
 }
 
-.dashboardAttendance tbody tr:hover {
-  background: #fdf2f8;
-}
-
-.dashboardAttendance tbody tr:last-child td {
-  border-bottom: none;
-}
-
 .dashboardAttendance p {
   color: #9d174d;
   font-size: 0.9rem;
@@ -270,7 +326,7 @@
   align-items: center;
   gap: 0.2rem;
   flex-wrap: nowrap;
-  min-width: 9.5rem;       /* enough for 3 selects + the tick button */
+  min-width: 9.5rem;
 }
 
 .attendanceTimeEditor select {
@@ -298,6 +354,27 @@
 }
 
 .attendanceTimeSave:disabled { opacity: 0.55; cursor: wait; }
-.attendanceTimeMessage { margin: 0 0 0.75rem !important; color: #047857 !important; font-weight: 600; }
+.attendanceTimeMessage { margin: 0 0 0.6rem !important; color: #047857 !important; font-weight: 600; flex-shrink: 0; }
 
+/* Plain-text time display shown once a row's time has been saved
+   (the pencil icon reopens the dropdown editor). */
+.attendanceTimeDisplay {
+  font-weight: 600;
+  color: #1e1b3a;
+}
 
+/* Small pencil/close icon button at the end of each row that toggles
+   the time dropdown editors back open. */
+.attendanceEditIconButton {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0.2rem 0.4rem;
+  border-radius: 0.4rem;
+  transition: background 0.15s ease;
+}
+
+.attendanceEditIconButton:hover {
+  background: rgba(0, 0, 0, 0.06);
+}

@@ -26,6 +26,7 @@ const transporter = nodemailer.createTransport({
     rejectUnauthorized: false,
   },
   connectionTimeout: 10000,
+
   greetingTimeout: 10000,
 });
 
@@ -99,11 +100,11 @@ export function buildLeaveRequestEmailContent(request, options = {}) {
           <table style="width: 100%; border-collapse: collapse; font-size: 13px; border: 1px solid #cbd5e1; border-radius: 8px; overflow: hidden;">
             <!-- Header row -->
             <tr style="background-color: #f8fafc; border-bottom: 1px solid #cbd5e1;">
-              <td colspan="2" style="padding: 10px 12px; font-weight: 600; color: #334155;">
+              <td colspan="2" style="padding: 10px 12px; font-weight: 600; color: #334155; border-right: 1px solid #cbd5e1;">
                 Balance Leaves: EL: <strong>${request.EarnLeaveBalance ?? 0}</strong> | SL: <strong>${request.SickLeaveBalance ?? 0}</strong>
               </td>
               <td colspan="2" style="padding: 10px 12px; font-weight: 600; color: #334155; text-align: right;">
-                Date of Application: <span style="color: #dc2626; font-weight: bold;">${formatDate(request.createdAt || new Date())}</span>
+                Date of Application: <span style="color: #dc2626; font-weight: bold;">${formatDate(request.createdAt || request.CreatedAt || new Date())}</span>
               </td>
             </tr>
             <!-- Row 1: Employee details -->
@@ -120,44 +121,75 @@ export function buildLeaveRequestEmailContent(request, options = {}) {
               <td style="padding: 10px 12px; font-weight: 600; color: #475569; background-color: #fafbfc; border-right: 1px solid #cbd5e1;">Section:</td>
               <td style="padding: 10px 12px; font-weight: 700; color: #0f172a;">${request.section || '-'}</td>
             </tr>
-            <!-- Row 3: Leave Type and Days -->
+            <!-- Row 3: From Time and To Time -->
+            <tr style="border-bottom: 1px solid #cbd5e1;">
+              <td style="padding: 10px 12px; font-weight: 600; color: #475569; background-color: #fafbfc; border-right: 1px solid #cbd5e1;">From Time:</td>
+              <td style="padding: 10px 12px; font-weight: 700; color: #0f172a; border-right: 1px solid #cbd5e1;">${request.fromTime || request.FromTime || '-'}</td>
+              <td style="padding: 10px 12px; font-weight: 600; color: #475569; background-color: #fafbfc; border-right: 1px solid #cbd5e1;">To Time:</td>
+              <td style="padding: 10px 12px; font-weight: 700; color: #0f172a;">${request.toTime || request.ToTime || '-'}</td>
+            </tr>
+            <!-- Row 4: Shift and Employee Type -->
+            <tr style="border-bottom: 1px solid #cbd5e1;">
+              <td style="padding: 10px 12px; font-weight: 600; color: #475569; background-color: #fafbfc; border-right: 1px solid #cbd5e1;">Shift:</td>
+              <td style="padding: 10px 12px; font-weight: 700; color: #0f172a; border-right: 1px solid #cbd5e1;">${request.shift || request.Shift || '-'}</td>
+              <td style="padding: 10px 12px; font-weight: 600; color: #475569; background-color: #fafbfc; border-right: 1px solid #cbd5e1;">Employee Type:</td>
+              <td style="padding: 10px 12px; font-weight: 700; color: #0f172a;">${request.empType || request.EmpType || '-'}</td>
+            </tr>
+            <!-- Row 5: Leave Type and Days -->
             <tr style="border-bottom: 1px solid #cbd5e1;">
               <td style="padding: 10px 12px; font-weight: 600; color: #475569; background-color: #fafbfc; border-right: 1px solid #cbd5e1;">Leave Type:</td>
               <td style="padding: 10px 12px; font-weight: 700; color: #0f172a; border-right: 1px solid #cbd5e1;">${request.leaveType || '-'}</td>
               <td style="padding: 10px 12px; font-weight: 600; color: #475569; background-color: #fafbfc; border-right: 1px solid #cbd5e1;">No of Days:</td>
               <td style="padding: 10px 12px; font-weight: 700; color: #0f172a;">${request.totalDays || '-'}</td>
             </tr>
-            <!-- Row 4: Start Date and End Date -->
+            <!-- Row 6: Start Date and End Date -->
             <tr style="border-bottom: 1px solid #cbd5e1;">
               <td style="padding: 10px 12px; font-weight: 600; color: #475569; background-color: #fafbfc; border-right: 1px solid #cbd5e1;">Leave Start Date:</td>
               <td style="padding: 10px 12px; font-weight: 700; color: #0f172a; border-right: 1px solid #cbd5e1;">${formatDate(request.startDate)}</td>
               <td style="padding: 10px 12px; font-weight: 600; color: #475569; background-color: #fafbfc; border-right: 1px solid #cbd5e1;">End Date:</td>
               <td style="padding: 10px 12px; font-weight: 700; color: #0f172a;">${formatDate(request.endDate)}</td>
             </tr>
-            <!-- Row 5: Contact and Reliever -->
+            <!-- Row 7: Contact and Reliever -->
             <tr style="border-bottom: 1px solid #cbd5e1;">
               <td style="padding: 10px 12px; font-weight: 600; color: #475569; background-color: #fafbfc; border-right: 1px solid #cbd5e1;">Contact Number:</td>
               <td style="padding: 10px 12px; font-weight: 700; color: #0f172a; border-right: 1px solid #cbd5e1;">${request.contactNumber || '-'}</td>
               <td style="padding: 10px 12px; font-weight: 600; color: #475569; background-color: #fafbfc; border-right: 1px solid #cbd5e1;">Reliever:</td>
               <td style="padding: 10px 12px; font-weight: 700; color: #0f172a;">${request.relieverName || request.relieverId || '-'}</td>
             </tr>
-            <!-- Row 6: Reason -->
+            <!-- Row 8: Reason -->
             <tr style="border-bottom: 1px solid #cbd5e1;">
               <td style="padding: 10px 12px; font-weight: 600; color: #475569; background-color: #fafbfc; border-right: 1px solid #cbd5e1;">Reason:</td>
               <td colspan="3" style="padding: 10px 12px; font-weight: 700; color: #0f172a;">${request.reason || '-'}</td>
             </tr>
-            <!-- Row 7: Approver status / flow -->
+            <!-- Row 9: Attachment -->
+            <tr style="border-bottom: 1px solid #cbd5e1;">
+              <td style="padding: 10px 12px; font-weight: 600; color: #475569; background-color: #fafbfc; border-right: 1px solid #cbd5e1;">Attachment:</td>
+              <td colspan="3" style="padding: 10px 12px; font-weight: 700; color: #0f172a;">
+                ${request.TranId && request.AttachmentName ? `
+                  <a href="${APP_URL}/api/leave/document/${request.TranId}" target="_blank" style="color: #2563eb; text-decoration: underline;">
+                    ${request.AttachmentName}
+                  </a>
+                ` : (request.AttachmentName || '-')}
+              </td>
+            </tr>
+            <!-- Row 10: HoD Approval -->
+            <tr style="border-bottom: 1px solid #cbd5e1;">
+              <td style="padding: 10px 12px; font-weight: 600; color: #475569; background-color: #fafbfc; border-right: 1px solid #cbd5e1;">HoD Approval:</td>
+              <td style="padding: 10px 12px; font-weight: 700; color: #0f172a; border-right: 1px solid #cbd5e1;">${request.HodApproval || '-'}</td>
+              <td style="padding: 10px 12px; font-weight: 600; color: #475569; background-color: #fafbfc; border-right: 1px solid #cbd5e1;">HoD Status:</td>
+              <td style="padding: 10px 12px; font-weight: 700; color: #0f172a;">${request.HodStatus || 'PENDING'}</td>
+            </tr>
+            <!-- Row 11: CCC Approval -->
+            <tr style="border-bottom: 1px solid #cbd5e1;">
+              <td style="padding: 10px 12px; font-weight: 600; color: #475569; background-color: #fafbfc; border-right: 1px solid #cbd5e1;">CCC Approval:</td>
+              <td style="padding: 10px 12px; font-weight: 700; color: #0f172a; border-right: 1px solid #cbd5e1;">${request.CccApproval || '-'}</td>
+              <td style="padding: 10px 12px; font-weight: 600; color: #475569; background-color: #fafbfc; border-right: 1px solid #cbd5e1;">CCC Status:</td>
+              <td style="padding: 10px 12px; font-weight: 700; color: #0f172a;">${request.CccStatus || 'PENDING'}</td>
+            </tr>
+            <!-- Row 12: Approval Flow -->
             <tr style="border-bottom: 1px solid #cbd5e1;">
               <td style="padding: 10px 12px; font-weight: 600; color: #475569; background-color: #fafbfc; border-right: 1px solid #cbd5e1;">Approval Flow:</td>
               <td colspan="3" style="padding: 10px 12px; font-weight: 700; color: #0f172a;">${approvalFlow || '-'}</td>
-            </tr>
-            <tr style="background-color: #f8fafc;">
-              <td colspan="2" style="padding: 10px 12px; font-weight: 700; color: #0f172a; border-right: 1px solid #cbd5e1;">
-                Current Approver: <span style="color: #2563eb;">${currentApproverName || '-'}</span> (Waiting)
-              </td>
-              <td colspan="2" style="padding: 10px 12px; font-weight: 700; color: #0f172a;">
-                Status: <span style="color: #2563eb;">${status}</span>
-              </td>
             </tr>
             ${remarks ? `
             <tr style="border-top: 1px solid #cbd5e1; background-color: #fffbeb;">
@@ -203,21 +235,27 @@ export function buildLeaveRequestEmailContent(request, options = {}) {
     `Applicant Name: ${request.applicantName || '-'}`,
     `Department: ${request.department || '-'}`,
     `Section: ${request.section || '-'}`,
+    `From Time: ${request.fromTime || request.FromTime || '-'}`,
+    `To Time: ${request.toTime || request.ToTime || '-'}`,
+    `Shift: ${request.shift || request.Shift || '-'}`,
+    `Employee Type: ${request.empType || request.EmpType || '-'}`,
     `Leave Type: ${request.leaveType || '-'}`,
     `Start Date: ${formatDate(request.startDate)}`,
     `End Date: ${formatDate(request.endDate)}`,
     `Total Days: ${request.totalDays || '-'}`,
     `Reason: ${request.reason || '-'}`,
+    `Attachment: ${request.AttachmentName || '-'}`,
     `Reliever ID: ${request.relieverId || '-'}`,
     `Reliever Name: ${request.relieverName || '-'}`,
     `Contact Number: ${request.contactNumber || '-'}`,
+    `HoD Approval: ${request.HodApproval || '-'}`,
+    `HoD Status: ${request.HodStatus || 'PENDING'}`,
+    `CCC Approval: ${request.CccApproval || '-'}`,
+    `CCC Status: ${request.CccStatus || 'PENDING'}`,
     `Approval Flow: ${approvalFlow || '-'}`,
-    `Current Approver: ${currentApproverName || '-'}`,
-    `Next Approver: ${nextApproverName || '-'}`,
     `Direct Approve Link: ${directApproveLink || '-'}`,
     `Direct Reject Link: ${directRejectLink || '-'}`,
     `Approval Link: ${approvalLink || '-'}`,
-    `Status: ${status}`,
     `Remarks: ${remarks || '-'}`,
     `Sender: ${senderName}`,
   ].join('\n');

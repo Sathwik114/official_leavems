@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getLeaveRequestById, addLeaveApproval, updateLeaveRequestStatus, updateLeaveRequestRejection } from '@/lib/leaveDb';
 import { getEmployeeDetails } from '@/lib/payrollDb';
 import { getUserEmail, sendMail, buildLeaveRequestEmailContent, getApprovalLink, getDirectApproveLink, getDirectRejectLink } from '@/lib/mail';
+import { isCccUser } from '@/lib/leaveApprovalConfig';
 
 export async function GET(request) {
   try {
@@ -116,6 +117,19 @@ export async function GET(request) {
       relieverName: leaveRequest.RelieverName || '',
       contactNumber: leaveRequest.ContactNumber || '',
       approvalFlow: flow,
+      EarnLeaveBalance: leaveRequest.EarnLeaveBalance ?? applicantEmployee?.EarnLeaveBalance ?? 0,
+      SickLeaveBalance: leaveRequest.SickLeaveBalance ?? applicantEmployee?.SickLeaveBalance ?? 0,
+      fromTime: leaveRequest.FromTime || '',
+      toTime: leaveRequest.ToTime || '',
+      shift: leaveRequest.Shift || '',
+      empType: leaveRequest.EmpType || '',
+      createdAt: leaveRequest.CreatedAt || new Date(),
+      TranId: leaveRequest.TranId || '',
+      AttachmentName: leaveRequest.AttachmentName || '',
+      HodApproval: leaveRequest.HodApproval || '',
+      HodStatus: leaveRequest.HodStatus || 'PENDING',
+      CccApproval: leaveRequest.CccApproval || '',
+      CccStatus: leaveRequest.CccStatus || 'PENDING',
     };
 
     let emailSubject = '';
@@ -136,16 +150,18 @@ export async function GET(request) {
         directRejectLink: getDirectRejectLink(leaveRequestId, nextApprover),
       });
     } else {
-      recipientEmail = getUserEmail(leaveRequest.ApplicantId);
-      emailSubject = `Leave Request Approved: ${emailRequest.applicantName}`;
-      emailContent = buildLeaveRequestEmailContent(emailRequest, {
-        action: 'Approved',
-        currentApproverName: approverName,
-        nextApproverName: '',
-        status: 'APPROVED',
-        remarks: 'Approved directly via Email link',
-        senderName: approverName,
-      });
+      if (!isCccUser(targetApproverId)) {
+        recipientEmail = getUserEmail(leaveRequest.ApplicantId);
+        emailSubject = `Leave Request Approved: ${emailRequest.applicantName}`;
+        emailContent = buildLeaveRequestEmailContent(emailRequest, {
+          action: 'Approved',
+          currentApproverName: approverName,
+          nextApproverName: '',
+          status: 'APPROVED',
+          remarks: 'Approved directly via Email link',
+          senderName: approverName,
+        });
+      }
     }
 
     if (emailContent && recipientEmail) {
@@ -223,6 +239,19 @@ export async function POST(request) {
       relieverName: leaveRequest.RelieverName || '',
       contactNumber: leaveRequest.ContactNumber || '',
       approvalFlow: flow,
+      EarnLeaveBalance: leaveRequest.EarnLeaveBalance ?? applicantEmployee?.EarnLeaveBalance ?? 0,
+      SickLeaveBalance: leaveRequest.SickLeaveBalance ?? applicantEmployee?.SickLeaveBalance ?? 0,
+      fromTime: leaveRequest.FromTime || '',
+      toTime: leaveRequest.ToTime || '',
+      shift: leaveRequest.Shift || '',
+      empType: leaveRequest.EmpType || '',
+      createdAt: leaveRequest.CreatedAt || new Date(),
+      TranId: leaveRequest.TranId || '',
+      AttachmentName: leaveRequest.AttachmentName || '',
+      HodApproval: leaveRequest.HodApproval || '',
+      HodStatus: leaveRequest.HodStatus || 'PENDING',
+      CccApproval: leaveRequest.CccApproval || '',
+      CccStatus: leaveRequest.CccStatus || 'PENDING',
     };
 
     try {

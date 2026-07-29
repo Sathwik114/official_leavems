@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { addLeaveApproval, getLeaveRequestById, updateLeaveRequestRejection, updateLeaveRequestStatus } from '@/lib/leaveDb';
 import { getEmployeeDetails } from '@/lib/payrollDb';
 import { getUserEmail, sendMail, buildLeaveRequestEmailContent, getApprovalLink, getDirectApproveLink, getDirectRejectLink } from '@/lib/mail';
+import { isCccUser } from '@/lib/leaveApprovalConfig';
 
 export async function POST(request, { params }) {
   try {
@@ -69,6 +70,19 @@ export async function POST(request, { params }) {
       relieverName: leaveRequest.RelieverName || '',
       contactNumber: leaveRequest.ContactNumber || '',
       approvalFlow: flow,
+      EarnLeaveBalance: leaveRequest.EarnLeaveBalance ?? applicantEmployee?.EarnLeaveBalance ?? 0,
+      SickLeaveBalance: leaveRequest.SickLeaveBalance ?? applicantEmployee?.SickLeaveBalance ?? 0,
+      fromTime: leaveRequest.FromTime || '',
+      toTime: leaveRequest.ToTime || '',
+      shift: leaveRequest.Shift || '',
+      empType: leaveRequest.EmpType || '',
+      createdAt: leaveRequest.CreatedAt || new Date(),
+      TranId: leaveRequest.TranId || '',
+      AttachmentName: leaveRequest.AttachmentName || '',
+      HodApproval: leaveRequest.HodApproval || '',
+      HodStatus: leaveRequest.HodStatus || 'PENDING',
+      CccApproval: leaveRequest.CccApproval || '',
+      CccStatus: leaveRequest.CccStatus || 'PENDING',
     };
 
     let emailSubject = '';
@@ -90,16 +104,18 @@ export async function POST(request, { params }) {
           directRejectLink: getDirectRejectLink(leaveRequestId, nextApprover),
         });
       } else {
-        recipientEmail = getUserEmail(leaveRequest.ApplicantId);
-        emailSubject = `Leave Request Approved: ${emailRequest.applicantName}`;
-        emailContent = buildLeaveRequestEmailContent(emailRequest, {
-          action: 'Approved',
-          currentApproverName: approverName,
-          nextApproverName: '',
-          status: 'APPROVED',
-          remarks: remarks || '',
-          senderName: approverName,
-        });
+        if (!isCccUser(approvedBy)) {
+          recipientEmail = getUserEmail(leaveRequest.ApplicantId);
+          emailSubject = `Leave Request Approved: ${emailRequest.applicantName}`;
+          emailContent = buildLeaveRequestEmailContent(emailRequest, {
+            action: 'Approved',
+            currentApproverName: approverName,
+            nextApproverName: '',
+            status: 'APPROVED',
+            remarks: remarks || '',
+            senderName: approverName,
+          });
+        }
       }
     } else if (decisionValue === 'REJECTED') {
       recipientEmail = getUserEmail(leaveRequest.ApplicantId);

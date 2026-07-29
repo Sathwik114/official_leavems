@@ -344,9 +344,9 @@ export default function MonitorHodPage({ hodList = [] }) {
                     <thead>
                       <tr>
                         <th>Date</th>
-                        <th>Attendance Type</th>
                         <th>In Time</th>
                         <th>Out Time</th>
+                        <th>Attendance Type</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -356,9 +356,9 @@ export default function MonitorHodPage({ hodList = [] }) {
                         return (
                           <tr key={rowKey}>
                             <td>{date.toLocaleDateString()}</td>
-                            <td>{record.AttType || '-'}</td>
                             <td>{record.InTime || '-'}</td>
                             <td>{record.OutTime || '-'}</td>
+                            <td>{record.AttType || '-'}</td>
                           </tr>
                         );
                       })}

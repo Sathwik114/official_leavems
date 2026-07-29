@@ -177,6 +177,19 @@ export async function POST(request) {
       relieverName: relieverName || '',
       contactNumber: contactNumber || '',
       approvalFlow: approvalFlow.flow,
+      EarnLeaveBalance: applicantEmployee?.EarnLeaveBalance ?? 0,
+      SickLeaveBalance: applicantEmployee?.SickLeaveBalance ?? 0,
+      fromTime: savedLeaveRequest.FromTime || '',
+      toTime: savedLeaveRequest.ToTime || '',
+      shift: savedLeaveRequest.Shift || '',
+      empType: savedLeaveRequest.EmpType || '',
+      createdAt: savedLeaveRequest.CreatedAt || new Date(),
+      TranId: savedLeaveRequest.TranId || '',
+      AttachmentName: savedLeaveRequest.AttachmentName || '',
+      HodApproval: savedLeaveRequest.HodApproval || '',
+      HodStatus: savedLeaveRequest.HodStatus || 'PENDING',
+      CccApproval: savedLeaveRequest.CccApproval || '',
+      CccStatus: savedLeaveRequest.CccStatus || 'PENDING',
     };
 
     const { html, text } = buildLeaveRequestEmailContent(emailRequest, {

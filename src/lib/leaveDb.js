@@ -181,6 +181,8 @@ async function enrichLeaveRequest(request) {
     RelieverName: request.RelieverName || relieverEmployee?.EmpName || request.RelieverId || '',
     CurrentApprover: currentApproverEmployee?.EmpName || request.CurrentApprover || '',
     ApprovedBy: approvedByNames || request.ApprovedBy || '',
+    EarnLeaveBalance: applicantEmployee?.EarnLeaveBalance ?? 0,
+    SickLeaveBalance: applicantEmployee?.SickLeaveBalance ?? 0,
   };
 }
 

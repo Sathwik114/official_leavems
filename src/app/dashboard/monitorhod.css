@@ -174,7 +174,9 @@
 }
 
 .hodTableWrapper {
-  width: 100%;
+  width: fit-content;   /* was: width: 100% — shrink the border box to the table's actual width */
+  max-width: 100%;       /* still responsive on small screens */
+  margin: 0 auto;         /* centers the whole bordered box on the page */
   box-sizing: border-box;
   background: #ffffff;
   border: 2px solid #c084fc;
@@ -183,7 +185,7 @@
   box-shadow: 0 16px 34px -14px rgba(124, 58, 237, 0.4);
   display: flex;
   flex-direction: column;
-  min-height: 0;           /* NEW */
+  min-height: 0;
   max-height: 100%;
 }
 
@@ -326,14 +328,27 @@
   min-height: 0;
 }
 
+.attendanceDetailTableWrapper {
+  width: 70%;         /* 100% - 15% - 15% = 70% */
+  max-width: 70%;
+  margin: 0 auto;      /* centers the shrunk box, creating the 15%/15% side gaps */
+}
+
+.attendanceDetailTable {
+  width: 100%;         /* fills the wrapper's 70% */
+  min-width: 0;
+  max-width: 100%;
+  margin: 0;
+}
+/* Give Attendance Type a bit more room than the other 3 columns */
 .attendanceDetailTable th:nth-child(1),
-.attendanceDetailTable td:nth-child(1) { width: 25%; } /* Date */
+.attendanceDetailTable td:nth-child(1) { width: 22%; } /* Date */
 .attendanceDetailTable th:nth-child(2),
-.attendanceDetailTable td:nth-child(2) { width: 25%; } /* Attendance Type */
+.attendanceDetailTable td:nth-child(2) { width: 22%; } /* In Time */
 .attendanceDetailTable th:nth-child(3),
-.attendanceDetailTable td:nth-child(3) { width: 25%; } /* In Time */
+.attendanceDetailTable td:nth-child(3) { width: 22%; } /* Out Time */
 .attendanceDetailTable th:nth-child(4),
-.attendanceDetailTable td:nth-child(4) { width: 25%; } /* Out Time */
+.attendanceDetailTable td:nth-child(4) { width: 34%; } /* Attendance Type */
 
 .downloadExcelButton {
   margin-left: auto;

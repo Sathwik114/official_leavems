@@ -86,9 +86,6 @@ export default async function Dashboard() {
           Hello, {currentEmployee?.EmpName || user.name || user.username}
         </h1>
 
-        <p className="dashboardHeaderText">
-          You have successfully authenticated and entered the secure workspace.
-        </p>
       </div>
 
       <div className="dashboardAttendance">
