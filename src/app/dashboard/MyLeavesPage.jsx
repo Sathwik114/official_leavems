@@ -113,7 +113,7 @@ export default function MyLeavesPage() {
       'Reason': request.Reason || '-',
       'Status': request.Status || '-',
       'Attachment': request.AttachmentName || '-',
-      'Current Approver': request.CurrentApprover || '-',
+      'Current Approver': request.CurrentApproverId || request.CurrentApprover || '-',
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(exportRows);
@@ -244,7 +244,7 @@ export default function MyLeavesPage() {
                         request.AttachmentName || '-'
                       )}
                     </td>
-                    <td>{request.CurrentApprover || '-'}</td>
+                    <td>{request.CurrentApproverId || request.CurrentApprover || '-'}</td>
                   </tr>
                 ))}
               </tbody>

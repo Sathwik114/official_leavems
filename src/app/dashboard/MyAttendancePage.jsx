@@ -70,7 +70,7 @@ export default function MyAttendancePage({ empcode }) {
   // Builds a clean, single-page "Monthly Attendance Report" PDF using jsPDF + autoTable:
   //   Title: centered
   //   Header: Employee ID | Employee Name  /  Department | Month  (boxed, thick black border)
-  //   Table: Date | InTime | OutTime | Attendance Type | Reason for leave | Remarks
+  //   Table: Date | InTime | OutTime | Attendance Type | Remarks (full remaining width)
   //     — sorted ascending by date (1st of the month first)
   //     — dotted grid lines (real dashes, not solid), printer-safe
   //     — Date column rendered bold + pure black so it stays crisp when printed/scanned
@@ -78,7 +78,8 @@ export default function MyAttendancePage({ empcode }) {
   //       "2 rows tall" footer buffer, then self-corrected: if jsPDF's real
   //       text metrics push the table past one page, we shrink the row
   //       height and re-render until everything fits on a single A4 page.
-  //   Footer: "GREENTECH INDUSTRIES HR", 10pt from the bottom edge.
+  //   Sign-off line: "Prepared: / Checked: / Approved:" between the table and footer.
+  //   Footer: "Greentech Industries HR", 10pt from the bottom edge.
   async function handleDownloadPdf() {
     if (!attendance.length) return;
 
@@ -168,7 +169,7 @@ export default function MyAttendancePage({ empcode }) {
       // ---- Footer text setup ----
       // Footer text sits 10pt above the page's bottom edge.
       const footerPrintedDate = formatRegisterDate(new Date());
-      const footerText = `GREENTECH INDUSTRIES HR@ Printed ${footerPrintedDate} By AVGV`;
+      const footerText = `Greentech Industries HR@  ${footerPrintedDate} By Jagadeesh`;
       const footerFontSize = 8;
       const footerBaselineY = pageHeight - 10; // 10pt from the very bottom
 
@@ -185,7 +186,6 @@ export default function MyAttendancePage({ empcode }) {
         record.OutTime || '',
         record.AttType || '',
         '',
-        '',
       ]);
 
       const usableWidth = pageWidth - marginX * 2; // portrait A4: 595 - 60 = 535pt
@@ -198,9 +198,7 @@ export default function MyAttendancePage({ empcode }) {
         attType: 85,
       };
       const fixedSum = colWidths.date + colWidths.inTime + colWidths.outTime + colWidths.attType;
-      const remaining = usableWidth - fixedSum;
-      const reasonWidth = remaining / 2;
-      const remarksWidth = remaining - reasonWidth;
+      const remarksWidth = usableWidth - fixedSum;
 
       // ---- Dynamic row height, with a self-correcting single-page guarantee ----
       // The row height is planned to exactly fill the page, but jsPDF's real
@@ -208,8 +206,12 @@ export default function MyAttendancePage({ empcode }) {
       // than the plan — enough to spill the last row onto a near-empty page 2.
       // Rather than trust the one-shot estimate, render, check the actual
       // page count, and shrink + re-render if it didn't fit on one page.
+      //
+      // The footer buffer reserves 3 row-heights worth of space below the
+      // table: one for the "Prepared / Checked / Approved" sign-off line,
+      // plus breathing room above/below it before the footer text.
       const totalRowCount = rows.length + 1; // +1 for the header row
-      const nominalBufferRows = 2;
+      const nominalBufferRows = 3;
       const MIN_ROW_HEIGHT = 8;
 
       function availableHeightFor(rh) {
@@ -247,7 +249,7 @@ export default function MyAttendancePage({ empcode }) {
 
         autoTable(doc, {
           startY: tableStartY,
-          head: [['Date', 'In Time', 'Out Time', 'Attendance Type', 'Reason for Leave', 'Remarks']],
+          head: [['Date', 'In Time', 'Out Time', 'Attendance Type', 'Remarks']],
           body: rows,
           // 'plain' = no lines drawn by autoTable itself; we draw a dotted
           // grid ourselves in didDrawCell so every border is dashed, not solid.
@@ -278,8 +280,7 @@ export default function MyAttendancePage({ empcode }) {
             1: { cellWidth: colWidths.inTime },
             2: { cellWidth: colWidths.outTime },
             3: { cellWidth: colWidths.attType },
-            4: { cellWidth: reasonWidth },
-            5: { cellWidth: remarksWidth },
+            4: { cellWidth: remarksWidth },
           },
           didParseCell: (data) => {
             // Date column: force bold + pure black so it stays crisp and
@@ -362,6 +363,29 @@ export default function MyAttendancePage({ empcode }) {
       doc.setDrawColor(...BLACK);
       doc.setLineWidth(OUTER_BORDER_WIDTH);
       doc.rect(marginX, tableStartY, usableWidth, tableFinalY - tableStartY, 'S');
+
+      // ---- Sign-off line: Prepared / Checked / Approved ----
+      // Sits in the reserved buffer band between the table's bottom border
+      // and the footer text, vertically centered in that gap. Three equal
+      // columns across the table width, label left-aligned in each column,
+      // leaving blank space after every label (including Approved, which
+      // now has room before the page edge) to physically sign.
+      const signOffY = (tableFinalY + footerBaselineY) / 2 + 2;
+      const signColWidth = usableWidth / 3;
+      const signCols = [
+        { label: 'Prepared:', x: marginX },
+        { label: 'Checked:', x: marginX + signColWidth },
+        { label: 'Approved:', x: marginX + signColWidth * 2 },
+      ];
+
+      doc.setLineDashPattern([], 0);
+      doc.setFontSize(9);
+      doc.setFont(undefined, 'bold');
+      doc.setTextColor(0, 0, 0);
+
+      signCols.forEach((col) => {
+        doc.text(col.label, col.x, signOffY);
+      });
 
       // ---- Footer: "GREENTECH INDUSTRIES HR", 10pt from bottom ----
       doc.setFontSize(footerFontSize);

@@ -191,6 +191,11 @@ export default function ApplyLeaveForm({ employee, currentUserUsername, approval
       return;
     }
 
+    if (!contactNumber.trim()) {
+      setSubmitError('Please enter a contact number while on leave.');
+      return;
+    }
+
     if (!approvalFlow) {
       setSubmitError('This employee is not configured for the leave approval workflow.');
       return;
@@ -360,7 +365,7 @@ export default function ApplyLeaveForm({ employee, currentUserUsername, approval
                       ))}
                     </select>
                     <select value={startMin} onChange={(e) => setStartMin(e.target.value)}>
-                      {['00','05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'].map((m) => (
+                      {['00', '30'].map((m) => (
                         <option key={m} value={m}>{m}</option>
                       ))}
                     </select>
@@ -385,7 +390,7 @@ export default function ApplyLeaveForm({ employee, currentUserUsername, approval
                       ))}
                     </select>
                     <select value={endMin} onChange={(e) => setEndMin(e.target.value)}>
-                      {['00','05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'].map((m) => (
+                      {['00', '30'].map((m) => (
                         <option key={m} value={m}>{m}</option>
                       ))}
                     </select>
@@ -462,37 +467,53 @@ export default function ApplyLeaveForm({ employee, currentUserUsername, approval
             )}
           </div>
 
-          {/* Reliever section */}
-          <div className="leaveSection">
-            <h2 className="leaveSectionLabel">Reliever Details</h2>
+          {/* Reliever section + Contact Number section — two separate boxed
+              containers, side by side, with labels given equal height so
+              the actual input fields line up at the same vertical level */}
+          <div style={{ display: 'flex', gap: '16px', alignItems: 'stretch' }}>
+            <div className="leaveSection" style={{ flex: '0 0 60%' }}>
+              <h2 className="leaveSectionLabel">Reliever Details</h2>
 
-            <div className="leaveFormRow leaveThreeCol">
-              <div className="leaveField">
-                <label>Reliever ID</label>
-                <input
-                  type="text"
-                  value={relieverId}
-                  onChange={(e) => setRelieverId(e.target.value)}
-                  onBlur={handleRelieverIdBlur}
-                />
+              <div className="leaveFormRow leaveThreeCol">
+                <div className="leaveField">
+                  <label style={{ display: 'block', minHeight: '18px' }}>Reliever ID</label>
+                  <input
+                    type="text"
+                    value={relieverId}
+                    onChange={(e) => setRelieverId(e.target.value)}
+                    onBlur={handleRelieverIdBlur}
+                  />
+                </div>
+                <div className="leaveField leaveFieldGrow">
+                  <label style={{ display: 'block', minHeight: '18px' }}>Reliever Name</label>
+                  <input
+                    type="text"
+                    value={relieverName}
+                    onChange={(e) => setRelieverName(e.target.value)}
+                    placeholder={relieverLookupStatus === 'loading' ? 'Looking up...' : ''}
+                    className={relieverLookupStatus === 'loading' ? 'leaveReadOnly' : ''}
+                    readOnly={relieverLookupStatus === 'loading'}
+                  />
+                  {relieverLookupStatus === 'error' && (
+                    <span className="leaveFieldError">Employee ID not found</span>
+                  )}
+                </div>
               </div>
-              <div className="leaveField">
-                <label>Reliever Name</label>
-                <input
-                  type="text"
-                  value={relieverName}
-                  onChange={(e) => setRelieverName(e.target.value)}
-                  placeholder={relieverLookupStatus === 'loading' ? 'Looking up...' : ''}
-                  className={relieverLookupStatus === 'loading' ? 'leaveReadOnly' : ''}
-                  readOnly={relieverLookupStatus === 'loading'}
-                />
-                {relieverLookupStatus === 'error' && (
-                  <span className="leaveFieldError">Employee ID not found</span>
-                )}
-              </div>
-              <div className="leaveField">
-                <label>Contact Number while on Leave</label>
-                <input type="text" value={contactNumber} onChange={(e) => setContactNumber(e.target.value)} />
+            </div>
+
+            <div className="leaveSection" style={{ flex: '0 0 40%' }}>
+              <h2 className="leaveSectionLabel">Contact Number while on Leave</h2>
+
+              <div className="leaveFormRow">
+                <div className="leaveField" style={{ width: '100%' }}>
+                  <label style={{ display: 'block', minHeight: '18px' }}>Contact Number</label>
+                  <input
+                    type="text"
+                    value={contactNumber}
+                    onChange={(e) => setContactNumber(e.target.value)}
+                    required
+                  />
+                </div>
               </div>
             </div>
           </div>
