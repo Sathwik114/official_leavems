@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import './monitorhod.css';
 
 async function fetchEmployeeProfile(empcode) {
   try {

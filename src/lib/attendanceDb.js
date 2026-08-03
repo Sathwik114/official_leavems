@@ -1,11 +1,23 @@
 import sql from "mssql";
 
 const config = {
-  user: "paydev",
-  password: "dev.gtipay@123",
-  server: "10.40.10.105",
-  database: "AttmSystem",
-  port: 1433,
+  user: process.env.DB_USER || 'paydev',
+  password: process.env.DB_PASSWORD || 'dev.gtipay@123',
+  server: process.env.DB_SERVER || '10.40.10.105',
+  database: process.env.DB_NAME || 'AttmSystem',
+  port: Number(process.env.DB_PORT || 1433),
+  options: {
+    encrypt: false,
+    trustServerCertificate: true,
+  },
+};
+
+const leaveConfig = {
+  user: process.env.LEAVE_DB_USER || process.env.DB_USER || 'paydev',
+  password: process.env.LEAVE_DB_PASSWORD || process.env.DB_PASSWORD || 'dev.gtipay@123',
+  server: process.env.LEAVE_DB_SERVER || process.env.DB_SERVER || '10.40.10.105',
+  database: process.env.LEAVE_DB_NAME || 'OfficialLeave',
+  port: Number(process.env.LEAVE_DB_PORT || process.env.DB_PORT || 1433),
   options: {
     encrypt: false,
     trustServerCertificate: true,
@@ -13,12 +25,20 @@ const config = {
 };
 
 let poolPromise;
+let leavePoolPromise;
 
 async function getPool() {
   if (!poolPromise) {
     poolPromise = new sql.ConnectionPool(config).connect();
   }
   return poolPromise;
+}
+
+async function getLeavePool() {
+  if (!leavePoolPromise) {
+    leavePoolPromise = new sql.ConnectionPool(leaveConfig).connect();
+  }
+  return leavePoolPromise;
 }
 
 export async function getAttendance(empcode) {
@@ -105,9 +125,11 @@ export async function getAttendanceData(empcode, month, year) {
     const yearStr = String(year);
     const tableName = `CAP${monthStr}${yearStr}`;
 
+    const cleanEmpcode = String(empcode || '').trim();
+
     const result = await pool
       .request()
-      .input("empcode", sql.NVarChar, String(empcode))
+      .input("empcode", sql.NVarChar, cleanEmpcode)
       .query(`
         SELECT
           Empcode,
@@ -121,7 +143,59 @@ export async function getAttendanceData(empcode, month, year) {
         ORDER BY AttDate ASC
       `);
 
-    return result.recordset || [];
+    const attendance = result.recordset || [];
+
+    // Fetch official leave entries from the separate leave DB.
+    let leaves = [];
+    const startOfMonth = new Date(parseInt(yearStr, 10), parseInt(monthStr, 10) - 1, 1);
+    const endOfMonth = new Date(parseInt(yearStr, 10), parseInt(monthStr, 10), 0);
+
+    try {
+      const leavePool = await getLeavePool();
+      const leaveResult = await leavePool.request()
+        .input('Empcode', sql.NVarChar, cleanEmpcode)
+        .input('StartOfMonth', sql.DateTime, startOfMonth)
+        .input('EndOfMonth', sql.DateTime, endOfMonth)
+        .query(`
+          SELECT
+            ApplicantId,
+            StartDate,
+            EndDate,
+            Reason
+          FROM dbo.AllLeaveRequests
+          WHERE LTRIM(RTRIM(ApplicantId)) = @Empcode
+            AND CONVERT(varchar(10), StartDate, 120) <= CONVERT(varchar(10), @EndOfMonth, 120)
+            AND CONVERT(varchar(10), EndDate, 120) >= CONVERT(varchar(10), @StartOfMonth, 120)
+        `);
+
+      leaves = leaveResult.recordset || [];
+    } catch (e) {
+      console.error('Failed to fetch leave data from OfficialLeave.AllLeaveRequests:', e);
+      leaves = [];
+    }
+
+    function normalizeDateOnly(d) {
+      const dt = new Date(d);
+      dt.setHours(0, 0, 0, 0);
+      return dt.getTime();
+    }
+
+    const annotated = attendance.map((rec) => {
+      try {
+        const attTime = normalizeDateOnly(rec.AttDate);
+        const matching = leaves.find((lv) => {
+          if (!lv || !lv.StartDate || !lv.EndDate) return false;
+          const fromTime = normalizeDateOnly(lv.StartDate);
+          const toTime = normalizeDateOnly(lv.EndDate);
+          return attTime >= fromTime && attTime <= toTime;
+        });
+        return { ...rec, Remarks: matching ? (matching.Reason || '') : '' };
+      } catch (err) {
+        return { ...rec, Remarks: '' };
+      }
+    });
+
+    return annotated;
   } catch (err) {
     console.error(`Error fetching attendance for ${empcode}:`, err);
     return [];

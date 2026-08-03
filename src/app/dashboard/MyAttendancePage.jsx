@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import './monitorhod.css';
 
 function sortAttendanceDesc(records) {
   return [...records].sort((a, b) => new Date(b.AttDate) - new Date(a.AttDate));
@@ -185,7 +184,7 @@ export default function MyAttendancePage({ empcode }) {
         record.InTime || '',
         record.OutTime || '',
         record.AttType || '',
-        '',
+        record.Remarks || '',
       ]);
 
       const usableWidth = pageWidth - marginX * 2; // portrait A4: 595 - 60 = 535pt
@@ -485,6 +484,7 @@ export default function MyAttendancePage({ empcode }) {
                     <th>In Time</th>
                     <th>Out Time</th>
                     <th>Attendance Type</th>
+                    <th>Remarks</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -497,6 +497,7 @@ export default function MyAttendancePage({ empcode }) {
                         <td>{record.InTime || '-'}</td>
                         <td>{record.OutTime || '-'}</td>
                         <td>{record.AttType || '-'}</td>
+                        <td>{record.Remarks || ''}</td>
                       </tr>
                     );
                   })}

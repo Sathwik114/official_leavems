@@ -340,15 +340,17 @@
   max-width: 100%;
   margin: 0;
 }
-/* Give Attendance Type a bit more room than the other 3 columns */
+/* Give each attendance detail column a visible width, including Remarks */
 .attendanceDetailTable th:nth-child(1),
-.attendanceDetailTable td:nth-child(1) { width: 22%; } /* Date */
+.attendanceDetailTable td:nth-child(1) { width: 18%; } /* Date */
 .attendanceDetailTable th:nth-child(2),
-.attendanceDetailTable td:nth-child(2) { width: 22%; } /* In Time */
+.attendanceDetailTable td:nth-child(2) { width: 16%; } /* In Time */
 .attendanceDetailTable th:nth-child(3),
-.attendanceDetailTable td:nth-child(3) { width: 22%; } /* Out Time */
+.attendanceDetailTable td:nth-child(3) { width: 16%; } /* Out Time */
 .attendanceDetailTable th:nth-child(4),
-.attendanceDetailTable td:nth-child(4) { width: 34%; } /* Attendance Type */
+.attendanceDetailTable td:nth-child(4) { width: 20%; } /* Attendance Type */
+.attendanceDetailTable th:nth-child(5),
+.attendanceDetailTable td:nth-child(5) { width: 30%; } /* Remarks */
 
 .downloadExcelButton {
   margin-left: auto;

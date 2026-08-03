@@ -1,0 +1,100 @@
+.allLeavesContainer {
+  padding: 24px;
+}
+
+.allLeavesTitle {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+.allLeavesFilters {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.filterGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.filterGroup label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #444;
+}
+
+.filterGroup select,
+.filterGroup input {
+  padding: 8px 10px;
+  border: 1px solid #d0d0d0;
+  border-radius: 6px;
+  font-size: 0.92rem;
+  min-width: 140px;
+  background-color: #fff;
+}
+
+.filterGroup input:focus,
+.filterGroup select:focus {
+  outline: none;
+  border-color: #2563eb;
+}
+
+.filterClearBtn {
+  padding: 9px 18px;
+  background-color: #f5f5f5;
+  color: #333;
+  border: 1px solid #d0d0d0;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  height: fit-content;
+  display: inline-flex;
+  align-items: center;
+}
+
+.filterClearBtn:hover {
+  background-color: #ebebeb;
+}
+
+.allLeavesEmpty {
+  color: #666;
+}
+
+.allLeavesTableWrapper {
+  overflow-x: auto;
+}
+
+.allLeavesTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.allLeavesTable th,
+.allLeavesTable td {
+  border: 1px solid #e0e0e0;
+  padding: 10px 12px;
+  text-align: left;
+  font-size: 0.92rem;
+}
+
+.allLeavesTable th {
+  background-color: #f5f5f5;
+  font-weight: 700;
+}
+
+.viewFormLink {
+  color: #2563eb;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.viewFormLink:hover {
+  text-decoration: underline;
+}

@@ -1081,6 +1081,30 @@ export async function getAllLeaveRequests() {
   return enrichLeaveRequests(requests);
 }
 
+export async function getAllLeaveRequestsArchive() {
+  await ensureLeaveTables();
+  const pool = await getPool();
+
+  const result = await pool.request().query(`
+    SELECT
+      ApplicantId,
+      ApplicantName,
+      Department,
+      Section,
+      LeaveType,
+      StartDate,
+      EndDate,
+      FromTime,
+      ToTime,
+      HodStatus,
+      CccStatus
+    FROM dbo.AllLeaveRequests
+    ORDER BY StartDate DESC;
+  `);
+
+  return result.recordset || [];
+}
+
 export async function getAllLeaveApprovals() {
   await ensureLeaveTables();
   const pool = await getPool();

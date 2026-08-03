@@ -1,11 +1,11 @@
 export const LEAVE_ROLE_RULES = {
   mf: {
     ids: ['101024', '101027', '101049', '150121', '180272', '260296'],
-    approverIds: ['250479', '140287'],
+    approverIds: ['111079', '140287'],
   },
   adm: {
     ids: ['120124', '120137', '111254'],
-    approverIds: ['111075', '140287'],
+    approverIds: ['250479', '140287'],
   },
   vip: {
     ids: ['250479','111137', '210231', '111069', '100209'],
@@ -15,7 +15,7 @@ export const LEAVE_ROLE_RULES = {
     ccc: '140287',
   },
   hr: {
-    ids: ['230022','111075', '230506'],
+    ids: ['230022', '230506'],
   }
 };
 
@@ -36,6 +36,10 @@ export function isHrUser(userId) {
 export function isMfPrimaryApprover(userId) {
   const primaryApproverId = normalizeId(LEAVE_ROLE_RULES.mf?.approverIds?.[0]);
   return Boolean(primaryApproverId) && normalizeId(userId) === primaryApproverId;
+}
+
+export function isMfApprover(userId) {
+  return (LEAVE_ROLE_RULES.mf?.approverIds || []).map(normalizeId).includes(normalizeId(userId));
 }
 
 export function isAdmPrimaryApprover(userId) {
@@ -111,8 +115,15 @@ export function getDashboardRedirectForUser(userId) {
     return '/dashboard/pending-leaves';
   }
 
-  if (isCccUser(normalizedUserId)) {
-    return '/dashboard/monitor-hod';
+  if (isCccUser(normalizedUserId) || isMfApprover(normalizedUserId)) {
+    return '/dashboard/leave-approvals';
+  }
+
+  if (
+    LEAVE_ROLE_RULES.mf.ids.map(normalizeId).includes(normalizedUserId) ||
+    LEAVE_ROLE_RULES.adm.ids.map(normalizeId).includes(normalizedUserId)
+  ) {
+    return '/apply-leave';
   }
 
   return '/dashboard';

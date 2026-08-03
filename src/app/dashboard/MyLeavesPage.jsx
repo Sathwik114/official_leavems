@@ -17,6 +17,14 @@ function formatDisplayDate(value) {
   return parsedDate.toLocaleDateString('en-GB');
 }
 
+function formatStatus(value) {
+  if (!value || String(value).trim() === '') return 'Waiting';
+  const normalized = String(value).trim();
+  if (/^accept(ed)?$/i.test(normalized)) return 'Accept';
+  if (/^reject(ed)?$/i.test(normalized)) return 'Reject';
+  return normalized;
+}
+
 export default function MyLeavesPage() {
   const [myRequests, setMyRequests] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -56,24 +64,30 @@ export default function MyLeavesPage() {
   }, [myRequests]);
 
   const filteredRequests = useMemo(() => {
-    return myRequests.filter((request) => {
-      const requestDateValue = request.DateApplied || request.CreatedAt || request.StartDate;
-      if (!requestDateValue) return false;
-      const requestDate = new Date(requestDateValue);
-      if (Number.isNaN(requestDate.getTime())) return false;
+      return myRequests
+        .filter((request) => {
+          const requestDateValue = request.DateApplied || request.CreatedAt || request.StartDate;
+          if (!requestDateValue) return false;
+          const requestDate = new Date(requestDateValue);
+          if (Number.isNaN(requestDate.getTime())) return false;
 
-      if (dateFilter && requestDate.toISOString().split('T')[0] !== dateFilter) {
-        return false;
-      }
-      if (monthFilter && String(requestDate.getMonth() + 1).padStart(2, '0') !== monthFilter) {
-        return false;
-      }
-      if (yearFilter && String(requestDate.getFullYear()) !== yearFilter) {
-        return false;
-      }
-      return true;
-    });
-  }, [myRequests, dateFilter, monthFilter, yearFilter]);
+          if (dateFilter && requestDate.toISOString().split('T')[0] !== dateFilter) {
+            return false;
+          }
+          if (monthFilter && String(requestDate.getMonth() + 1).padStart(2, '0') !== monthFilter) {
+            return false;
+          }
+          if (yearFilter && String(requestDate.getFullYear()) !== yearFilter) {
+            return false;
+          }
+          return true;
+        })
+        .sort((a, b) => {
+          const dateA = new Date(a.DateApplied || a.CreatedAt || a.StartDate);
+          const dateB = new Date(b.DateApplied || b.CreatedAt || b.StartDate);
+          return dateB - dateA; // newest first
+        });
+    }, [myRequests, dateFilter, monthFilter, yearFilter]);
 
   const hasActiveFilters = dateFilter || monthFilter || yearFilter;
   const clearAllFilters = () => {
@@ -112,6 +126,8 @@ export default function MyLeavesPage() {
       'To Time': request.ToTime || '-',
       'Reason': request.Reason || '-',
       'Status': request.Status || '-',
+      'HOD Status': formatStatus(request.HodStatus),
+      'CCC Status': formatStatus(request.CccStatus),
       'Attachment': request.AttachmentName || '-',
       'Current Approver': request.CurrentApproverId || request.CurrentApprover || '-',
     }));
@@ -212,6 +228,8 @@ export default function MyLeavesPage() {
                   <th>To Time</th>
                   <th>Reason</th>
                   <th>Status</th>
+                  <th>HOD Status</th>
+                  <th>CCC Status</th>
                   <th>Attachment</th>
                   <th>Current Approver</th>
                 </tr>
@@ -230,6 +248,8 @@ export default function MyLeavesPage() {
                     <td>{request.ToTime || '-'}</td>
                     <td title={request.Reason || ''}>{truncateReason(request.Reason)}</td>
                     <td>{request.Status}</td>
+                    <td>{formatStatus(request.HodStatus)}</td>
+                    <td>{formatStatus(request.CccStatus)}</td>
                     <td>
                       {request.TranId && request.AttachmentName ? (
                         <a

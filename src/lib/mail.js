@@ -187,10 +187,6 @@ export function buildLeaveRequestEmailContent(request, options = {}) {
               <td style="padding: 10px 12px; font-weight: 700; color: #0f172a;">${request.CccStatus || 'PENDING'}</td>
             </tr>
             <!-- Row 12: Approval Flow -->
-            <tr style="border-bottom: 1px solid #cbd5e1;">
-              <td style="padding: 10px 12px; font-weight: 600; color: #475569; background-color: #fafbfc; border-right: 1px solid #cbd5e1;">Approval Flow:</td>
-              <td colspan="3" style="padding: 10px 12px; font-weight: 700; color: #0f172a;">${approvalFlow || '-'}</td>
-            </tr>
             ${remarks ? `
             <tr style="border-top: 1px solid #cbd5e1; background-color: #fffbeb;">
               <td style="padding: 10px 12px; font-weight: 600; color: #b45309; border-right: 1px solid #cbd5e1;">Remarks:</td>
@@ -252,7 +248,6 @@ export function buildLeaveRequestEmailContent(request, options = {}) {
     `HoD Status: ${request.HodStatus || 'PENDING'}`,
     `CCC Approval: ${request.CccApproval || '-'}`,
     `CCC Status: ${request.CccStatus || 'PENDING'}`,
-    `Approval Flow: ${approvalFlow || '-'}`,
     `Direct Approve Link: ${directApproveLink || '-'}`,
     `Direct Reject Link: ${directRejectLink || '-'}`,
     `Approval Link: ${approvalLink || '-'}`,

@@ -4,7 +4,7 @@
 import './page.css';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { isCccUser } from '@/lib/leaveApprovalConfig';
+import { getDashboardRedirectForUser } from '@/lib/leaveApprovalConfig';
 
 export default function Login() {
   const router = useRouter();
@@ -52,7 +52,7 @@ export default function Login() {
       setFormData({ username: '', password: '' });
 
       const userId = username.trim();
-      const redirectPath = isCccUser(userId) ? '/dashboard/leave-approvals' : '/dashboard';
+      const redirectPath = getDashboardRedirectForUser(userId);
 
       setTimeout(() => {
         router.push(redirectPath);

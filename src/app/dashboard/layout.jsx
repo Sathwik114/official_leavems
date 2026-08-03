@@ -8,10 +8,12 @@ import {
   isApproverUser,
   isApplicantUser,
   isHrUser,
+  isMfPrimaryApprover,
   canAccessMonitorHod,
   canAccessMyAttendance,
 } from '@/lib/leaveApprovalConfig';
 import './layout.css';
+import './monitorhod.css';
 
 export default async function DashboardLayout({ children }) {
   const cookieStore = await cookies();
@@ -39,12 +41,15 @@ export default async function DashboardLayout({ children }) {
   const isRoleUser = isApplicantUser(currentUserId) || isApprover;
 
   const isHr = isHrUser(currentUserId);
+  const isMfPrimaryApproverUser = isMfPrimaryApprover(currentUserId);
   const showMonitorHodLink = canAccessMonitorHod(currentUserId);
   const showMyAttendanceLink = canAccessMyAttendance(currentUserId);
   const showDashboardLink = !isCCC && !isHr;
+  const showApplyLeaveLink = !isCCC && !isHr && !isMfPrimaryApproverUser;
   const showApproveLink = isCCC || (isApprover || isVipApplicant) && !isHr;
   const showMyLeavesLink = !isCCC && !isHr && (isMfApplicant || isAdmApplicant || isVipApplicant || isApprover);
   const showPendingLeavesLink = isHr;
+  const showAllLeavesLink = isHr;
 
   return (
     <div className="dashboardShell">
@@ -56,9 +61,10 @@ export default async function DashboardLayout({ children }) {
 
         <div className="dashboardNavRight">
           <div className="dashboardNavLinks">
-            {showDashboardLink && (
-              <Link href="/dashboard" className="dashboardNavLink">
-                <span className="navIcon">🏠</span> Dashboard
+            
+            {showApplyLeaveLink && (
+              <Link href="/apply-leave" className="dashboardNavLink">
+                <span className="navIcon">📝</span> Apply for a Leave
               </Link>
             )}
             {showApproveLink && (
@@ -84,6 +90,11 @@ export default async function DashboardLayout({ children }) {
             {showPendingLeavesLink && (
               <Link href="/dashboard/pending-leaves" className="dashboardNavLink">
                 <span className="navIcon">📥</span> Track Pending Leave Status
+              </Link>
+            )}
+            {showAllLeavesLink && (
+              <Link href="/dashboard/all-leaves" className="dashboardNavLink">
+                <span className="navIcon">📂</span> All Leaves
               </Link>
             )}
           </div>

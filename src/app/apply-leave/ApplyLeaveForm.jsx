@@ -4,8 +4,42 @@ import { useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import './page.css';
 
+function to24HourMinutes(hour, min, period) {
+  let h = parseInt(hour, 10) % 12;
+  if (period === 'PM') h += 12;
+  return h * 60 + parseInt(min, 10);
+}
+
+function addOneHour(hour, min, period) {
+  const totalMinutes = to24HourMinutes(hour, min, period) + 60;
+  const wrapped = ((totalMinutes % (24 * 60)) + 24 * 60) % (24 * 60);
+  const h24 = Math.floor(wrapped / 60);
+  const min24 = wrapped % 60;
+  const newPeriod = h24 >= 12 ? 'PM' : 'AM';
+  let h12 = h24 % 12;
+  if (h12 === 0) h12 = 12;
+  return {
+    hour: String(h12).padStart(2, '0'),
+    min: String(min24).padStart(2, '0'),
+    period: newPeriod,
+  };
+}
+
 function getHalfDayLeaveType(leaveType, startTime, endTime, startDate, endDate) {
   if (!startDate || startDate !== endDate) return '';
+
+  if (leaveType === '1Hour') {
+    const [startHour, startMinPart] = startTime.split(':');
+    const [startMin, startPeriod] = startMinPart.split(' ');
+    const [endHour, endMinPart] = endTime.split(':');
+    const [endMin, endPeriod] = endMinPart.split(' ');
+
+    const startTotal = to24HourMinutes(startHour, startMin, startPeriod);
+    const endTotal = to24HourMinutes(endHour, endMin, endPeriod);
+    const diff = ((endTotal - startTotal) % (24 * 60) + 24 * 60) % (24 * 60);
+
+    return diff === 60 ? 'P/7H' : '';
+  }
 
   const halfDayLeaveTypes = {
     EL: {
@@ -68,6 +102,19 @@ export default function ApplyLeaveForm({ employee, currentUserUsername, approval
   const isVipLeaveRequest = approvalFlow?.role === 'vip';
   const balanceExceeded = !isVipLeaveRequest && (exceedsElBalance || exceedsSlBalance);
 
+  // Auto-sync End Date/Time to Start Date + 1 hour whenever "1 Hour" leave
+  // type is selected, or the start date/time changes while it's selected.
+  useEffect(() => {
+    if (leaveType !== '1Hour') return;
+    if (!startDate) return;
+
+    const next = addOneHour(startHour, startMin, startPeriod);
+    setEndDate(startDate);
+    setEndHour(next.hour);
+    setEndMin(next.min);
+    setEndPeriod(next.period);
+  }, [leaveType, startDate, startHour, startMin, startPeriod]);
+
   useEffect(() => {
     const timer = setTimeout(() => {
       if (startDate && endDate) {
@@ -80,7 +127,7 @@ export default function ApplyLeaveForm({ employee, currentUserUsername, approval
       );
 
       if (halfDayLeaveType) {
-        setTotalDays('0.5');
+        setTotalDays(leaveType === '1Hour' ? '0' : '0.5');
         return;
       }
 
@@ -255,10 +302,7 @@ export default function ApplyLeaveForm({ employee, currentUserUsername, approval
       }
 
       setSubmitMessage(`Leave application submitted successfully. First approval is pending with ${data.currentApproverName || data.currentApprover || 'the configured approver'}.`);
-      const nextPage = approvalFlow?.role === 'vip'
-        ? '/dashboard/leave-approvals'
-        : '/dashboard';
-      setTimeout(() => router.push(nextPage), 1200);
+      setTimeout(() => router.push('/dashboard/my-leaves'), 1200);
     } catch (err) {
       console.error('Leave submission failed:', err);
       setSubmitError(err.message || 'Leave submission failed.');
@@ -269,12 +313,6 @@ export default function ApplyLeaveForm({ employee, currentUserUsername, approval
 
   return (
     <div className="leavePage">
-      <div className="leaveTopBar">
-        <button className="backButton" onClick={() => router.back()}>
-          ← Back
-        </button>
-      </div>
-
       <div className="leaveCard">
         <div className="leaveCardHeader">
           <h1 className="leaveTitle">Leave Application</h1>
@@ -382,19 +420,37 @@ export default function ApplyLeaveForm({ employee, currentUserUsername, approval
               <div className="leaveDateHalf">
                 <label className="leaveDateHeading">End Date</label>
                 <div className="leaveDateHalfInner">
-                  <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+                  <input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    readOnly={leaveType === '1Hour'}
+                    className={leaveType === '1Hour' ? 'leaveReadOnly' : ''}
+                  />
                   <div className="leaveTimeInline">
-                    <select value={endHour} onChange={(e) => setEndHour(e.target.value)}>
+                    <select
+                      value={endHour}
+                      onChange={(e) => setEndHour(e.target.value)}
+                      disabled={leaveType === '1Hour'}
+                    >
                       {Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0')).map((h) => (
                         <option key={h} value={h}>{h}</option>
                       ))}
                     </select>
-                    <select value={endMin} onChange={(e) => setEndMin(e.target.value)}>
+                    <select
+                      value={endMin}
+                      onChange={(e) => setEndMin(e.target.value)}
+                      disabled={leaveType === '1Hour'}
+                    >
                       {['00', '30'].map((m) => (
                         <option key={m} value={m}>{m}</option>
                       ))}
                     </select>
-                    <select value={endPeriod} onChange={(e) => setEndPeriod(e.target.value)}>
+                    <select
+                      value={endPeriod}
+                      onChange={(e) => setEndPeriod(e.target.value)}
+                      disabled={leaveType === '1Hour'}
+                    >
                       <option value="AM">AM</option>
                       <option value="PM">PM</option>
                     </select>
@@ -418,6 +474,8 @@ export default function ApplyLeaveForm({ employee, currentUserUsername, approval
                   <option value="SL">SL</option>
                   <option value="LWP">LWP</option>
                   <option value="OD">OD</option>
+                  <option value="COFF">COFF</option>
+                  <option value="1Hour">1 Hour</option>
                 </select>
               </div>
 

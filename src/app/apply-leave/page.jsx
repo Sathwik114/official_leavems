@@ -33,10 +33,12 @@ export default async function ApplyLeavePage({ searchParams }) {
     }
   }
 
-  if (empcode) {
+  const applicantId = empcode || currentUserUsername;
+
+  if (applicantId) {
     try {
-      employee = await getEmployeeDetails(empcode);
-      approvalFlow = getLeaveApprovalFlow(employee?.EmpCode || empcode, currentUserUsername);
+      employee = await getEmployeeDetails(applicantId);
+      approvalFlow = getLeaveApprovalFlow(employee?.EmpCode || applicantId);
     } catch (err) {
       console.error('Employee fetch error:', err);
     }
