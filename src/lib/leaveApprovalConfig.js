@@ -15,7 +15,7 @@ export const LEAVE_ROLE_RULES = {
     ccc: '140287',
   },
   hr: {
-    ids: ['230022', '230506'],
+    ids: ['111233', '230506'],
   }
 };
 

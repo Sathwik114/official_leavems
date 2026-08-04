@@ -1097,7 +1097,8 @@ export async function getAllLeaveRequestsArchive() {
       FromTime,
       ToTime,
       HodStatus,
-      CccStatus
+      CccStatus,
+      Reason
     FROM dbo.AllLeaveRequests
     ORDER BY StartDate DESC;
   `);

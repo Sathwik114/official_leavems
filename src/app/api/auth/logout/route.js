@@ -7,12 +7,14 @@ export async function POST() {
       { status: 200 }
     );
 
+    const secureCookie = process.env.NODE_ENV === 'production' && false;
+
     // Clear the auth cookie by setting maxAge to 0 and path to '/'
     response.cookies.set({
       name: 'auth_token',
       value: '',
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: secureCookie,
       sameSite: 'lax',
       path: '/',
       maxAge: 0

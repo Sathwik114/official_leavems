@@ -90,6 +90,7 @@ export default async function AllLeavesPage({ searchParams }) {
                 <th>HOD Status</th>
                 <th>CCC Status</th>
                 <th>Leave Type</th>
+                <th>Reason</th>
               </tr>
             </thead>
             <tbody>
@@ -107,6 +108,7 @@ export default async function AllLeavesPage({ searchParams }) {
                   <td>{leave.HodStatus || '-'}</td>
                   <td>{leave.CccStatus || '-'}</td>
                   <td>{leave.LeaveType || '-'}</td>
+                  <td>{leave.Reason || '-'}</td>
                 </tr>
               ))}
             </tbody>

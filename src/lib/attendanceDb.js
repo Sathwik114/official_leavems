@@ -1,23 +1,60 @@
+import 'dotenv/config';
 import sql from "mssql";
 
 const config = {
-  user: process.env.DB_USER || 'paydev',
-  password: process.env.DB_PASSWORD || 'dev.gtipay@123',
-  server: process.env.DB_SERVER || '10.40.10.105',
-  database: process.env.DB_NAME || 'AttmSystem',
-  port: Number(process.env.DB_PORT || 1433),
+  user: process.env.ATT_DB_USER || process.env.DB_USER || 'paydev',
+  password: process.env.ATT_DB_PASSWORD || process.env.DB_PASSWORD || 'dev.gtipay@123',
+  server: process.env.ATT_DB_SERVER || process.env.DB_SERVER || '10.40.10.105',
+  database: process.env.ATT_DB_NAME || process.env.DB_NAME || 'AttmSystem',
+  port: Number(process.env.ATT_DB_PORT || process.env.DB_PORT || 1433),
   options: {
     encrypt: false,
     trustServerCertificate: true,
   },
 };
 
+function parseSqlServerConnectionString(connectionString) {
+  if (!connectionString) return null;
+
+  const cleaned = connectionString.trim().replace(/^"|"$/g, '');
+  const match = cleaned.match(/^sqlserver:\/\/([^;:/]+)(?::(\d+))?/i);
+  if (!match) return null;
+
+  const values = Object.fromEntries(
+    cleaned
+      .slice(cleaned.indexOf(';') + 1)
+      .split(';')
+      .filter(Boolean)
+      .map((part) => part.split(/=(.*)/s))
+      .filter(([key]) => key)
+      .map(([key, value]) => [key.trim().toLowerCase(), (value || '').trim()])
+  );
+
+  return {
+    user: values.user,
+    password: values.password,
+    server: match[1],
+    port: Number(match[2] || 1433),
+    database: values.database,
+  };
+}
+
+const databaseUrlConfig = parseSqlServerConnectionString(process.env.DATABASE_URL);
+
+if (process.env.DATABASE_URL && !databaseUrlConfig) {
+  console.warn('attendanceDb: DATABASE_URL is defined but could not be parsed. Please verify its format.');
+}
+
+if (!process.env.DATABASE_URL && !process.env.LEAVE_DB_USER && !process.env.DB_USER) {
+  console.warn('attendanceDb: No leave DB credentials found in DATABASE_URL, LEAVE_DB_USER, or DB_USER. Falling back to paydev defaults.');
+}
+
 const leaveConfig = {
-  user: process.env.LEAVE_DB_USER || process.env.DB_USER || 'paydev',
-  password: process.env.LEAVE_DB_PASSWORD || process.env.DB_PASSWORD || 'dev.gtipay@123',
-  server: process.env.LEAVE_DB_SERVER || process.env.DB_SERVER || '10.40.10.105',
-  database: process.env.LEAVE_DB_NAME || 'OfficialLeave',
-  port: Number(process.env.LEAVE_DB_PORT || process.env.DB_PORT || 1433),
+  user: process.env.LEAVE_DB_USER || databaseUrlConfig?.user || process.env.DB_USER || 'paydev',
+  password: process.env.LEAVE_DB_PASSWORD || databaseUrlConfig?.password || process.env.DB_PASSWORD || 'dev.gtipay@123',
+  server: process.env.LEAVE_DB_SERVER || databaseUrlConfig?.server || process.env.DB_SERVER || '10.40.10.105',
+  database: process.env.LEAVE_DB_NAME || databaseUrlConfig?.database || process.env.DB_NAME || 'OfficialLeave',
+  port: Number(process.env.LEAVE_DB_PORT || databaseUrlConfig?.port || process.env.DB_PORT || 1433),
   options: {
     encrypt: false,
     trustServerCertificate: true,

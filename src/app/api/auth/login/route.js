@@ -142,6 +142,9 @@ export async function POST(request) {
       .setExpirationTime('2h')
       .sign(secret);
 
+    const requestUrl = new URL(request.url);
+    const secureCookie = requestUrl.protocol === 'https:' && process.env.NODE_ENV === 'production';
+
     const response = NextResponse.json(
       { message: 'Logged in successfully', username },
       { status: 200 }
@@ -151,7 +154,7 @@ export async function POST(request) {
       name: 'auth_token',
       value: token,
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: secureCookie,
       sameSite: 'lax',
       path: '/',
       maxAge: 60 * 60 * 2,
