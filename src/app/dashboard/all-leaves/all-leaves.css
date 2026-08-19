@@ -27,6 +27,32 @@
   font-weight: 600;
   color: #444;
 }
+.leaveTypeHeaderCell {
+  vertical-align: middle;
+}
+
+.leaveTypeHeaderInner {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.allLeavesEmptyCell {
+  text-align: center;
+  padding: 24px 12px;
+  color: #777;
+  font-style: italic;
+}
+
+.columnFilterSelect {
+  font-size: 0.75rem;
+  padding: 2px 4px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  background: #fff;
+  cursor: pointer;
+  max-width: 130px;
+}
 
 .filterGroup select,
 .filterGroup input {
@@ -61,6 +87,32 @@
 
 .filterClearBtn:hover {
   background-color: #ebebeb;
+}
+
+.allLeavesDownloadButton {
+  margin-left: auto;
+  padding: 9px 18px;
+  background-color: #10b981;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  height: fit-content;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: background-color 0.15s ease, opacity 0.15s ease;
+}
+
+.allLeavesDownloadButton:hover:not(:disabled) {
+  background-color: #0ea371;
+}
+
+.allLeavesDownloadButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .allLeavesEmpty {

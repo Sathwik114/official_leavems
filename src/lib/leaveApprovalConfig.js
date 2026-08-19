@@ -1,7 +1,7 @@
 export const LEAVE_ROLE_RULES = {
   mf: {
     ids: ['101024', '101027', '101049', '150121', '180272', '260296'],
-    approverIds: ['111079', '140287'],
+    approverIds: ['100209', '100002'],
   },
   adm: {
     ids: ['120124', '120137', '111254'],
@@ -15,7 +15,7 @@ export const LEAVE_ROLE_RULES = {
     ccc: '140287',
   },
   hr: {
-    ids: ['111233', '230506'],
+    ids: ['111233'],
   }
 };
 
@@ -76,12 +76,26 @@ function appendMonitorHodEntries(entries, ids, roleLabel) {
 
 export function getMonitorHodListEntries(userId) {
   const normalizedUserId = normalizeId(userId);
+  const hiddenIds = new Set(['100209'].map(normalizeId));
 
   if (isCccUser(normalizedUserId) || isHrUser(normalizedUserId)) {
     const entries = [];
+
+    // VIP ids, with hidden ids already removed. These 3 are pulled out
+    // and placed at the top of the table in this exact order; the
+    // remaining VIP ids are appended after MF/ADM as before.
+    const vipIds = (LEAVE_ROLE_RULES.vip.ids || [])
+      .map(normalizeId)
+      .filter((id) => !hiddenIds.has(id));
+    const priorityOrder = ['210231', '111137', '111069'];
+    const priorityVipIds = priorityOrder.filter((id) => vipIds.includes(id));
+    const remainingVipIds = vipIds.filter((id) => !priorityOrder.includes(id));
+
+    appendMonitorHodEntries(entries, priorityVipIds, 'VIP');
     appendMonitorHodEntries(entries, LEAVE_ROLE_RULES.mf.ids, 'MF');
     appendMonitorHodEntries(entries, LEAVE_ROLE_RULES.adm.ids, 'ADM');
-    appendMonitorHodEntries(entries, LEAVE_ROLE_RULES.vip.ids, 'VIP');
+    appendMonitorHodEntries(entries, remainingVipIds, 'VIP');
+
     return entries;
   }
 
@@ -126,7 +140,7 @@ export function getDashboardRedirectForUser(userId) {
     return '/apply-leave';
   }
 
-  return '/dashboard';
+  return '/dashboard/leave-approvals';
 }
 
 export function getAllApplicantIds() {

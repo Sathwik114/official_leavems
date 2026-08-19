@@ -228,6 +228,7 @@ export default function MonitorHodPage({ hodList = [] }) {
               <table className="attendanceTable hodListTable">
                 <thead>
                   <tr>
+                    <th>ID</th>
                     <th>Employee ID</th>
                     <th>Employee Name</th>
                     <th>Department</th>
@@ -236,10 +237,11 @@ export default function MonitorHodPage({ hodList = [] }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {hodList.map((hod) => {
+                  {hodList.map((hod, index) => {
                     const profile = hodProfiles[hod.id];
                     return (
                       <tr key={hod.id}>
+                        <td>{index + 1}</td>
                         <td>{hod.id}</td>
                         <td>{profile?.EmpName || '-'}</td>
                         <td>{profile?.DeptCode || '-'}</td>

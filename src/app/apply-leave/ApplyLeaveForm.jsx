@@ -55,18 +55,34 @@ function getHalfDayLeaveType(leaveType, startTime, endTime, startDate, endDate) 
   return halfDayLeaveTypes[leaveType]?.[`${startTime}-${endTime}`] || '';
 }
 
+function formatApprovalFlowEntry(approverId, fallbackName = '') {
+  const trimmedId = String(approverId || '').trim();
+  if (!trimmedId) return '';
+
+  const aliasMap = {
+    '100002': 'CCC',
+    '100209': 'Linus',
+  };
+
+  if (aliasMap[trimmedId]) {
+    return `${trimmedId}(${aliasMap[trimmedId]})`;
+  }
+
+  return fallbackName ? `${fallbackName} (${trimmedId})` : trimmedId;
+}
+
 export default function ApplyLeaveForm({ employee, currentUserUsername, approvalFlow }) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const empcode = searchParams.get('empcode') || '';
 
-  const [leaveType, setLeaveType] = useState('EL');
+  const [leaveType, setLeaveType] = useState('');
   const [startDate, setStartDate] = useState('');
   const [startHour, setStartHour] = useState('08');
   const [startMin, setStartMin] = useState('30');
   const [startPeriod, setStartPeriod] = useState('AM');
   const [endDate, setEndDate] = useState('');
-  const [endHour, setEndHour] = useState('05');
+  const [endHour, setEndHour] = useState('06');
   const [endMin, setEndMin] = useState('00');
   const [endPeriod, setEndPeriod] = useState('PM');
   const [totalDays, setTotalDays] = useState('');
@@ -159,9 +175,7 @@ export default function ApplyLeaveForm({ employee, currentUserUsername, approval
           try {
             const res = await fetch(`/api/employee?empcode=${encodeURIComponent(trimmedId)}`);
             const data = await res.json();
-            return data.employee?.EmpName
-              ? `${data.employee.EmpName} (${trimmedId})`
-              : trimmedId;
+            return formatApprovalFlowEntry(trimmedId, data.employee?.EmpName || '');
           } catch (err) {
             console.error('Approval flow lookup failed:', err);
             return trimmedId;
@@ -232,6 +246,11 @@ export default function ApplyLeaveForm({ employee, currentUserUsername, approval
     setSubmitError('');
 
     const applicantId = employee?.EmpCode || empcode;
+
+    if (!leaveType) {
+      setSubmitError('Please select a leave type before submitting.');
+      return;
+    }
 
     if (!applicantId || !startDate || !endDate || !reason.trim()) {
       setSubmitError('Please complete the required leave fields before submitting.');
@@ -345,7 +364,7 @@ export default function ApplyLeaveForm({ employee, currentUserUsername, approval
             <p className="leaveInlineValue">
               {approvalFlowDisplay.length > 0
                 ? approvalFlowDisplay.join(' → ')
-                : approvalFlow.flow.join(' → ')}
+                : approvalFlow.flow.map((approverId) => formatApprovalFlowEntry(approverId)).join(' → ')}
             </p>
           </div>
         )}
@@ -403,7 +422,7 @@ export default function ApplyLeaveForm({ employee, currentUserUsername, approval
                       ))}
                     </select>
                     <select value={startMin} onChange={(e) => setStartMin(e.target.value)}>
-                      {['00', '30'].map((m) => (
+                      {['00','05','10','15','20','25','30','35','40','45','50','55'].map((m) => (
                         <option key={m} value={m}>{m}</option>
                       ))}
                     </select>
@@ -442,7 +461,7 @@ export default function ApplyLeaveForm({ employee, currentUserUsername, approval
                       onChange={(e) => setEndMin(e.target.value)}
                       disabled={leaveType === '1Hour'}
                     >
-                      {['00', '30'].map((m) => (
+                      {['00','05','10','15','20','25','30','35','40','45','50','55'].map((m) => (
                         <option key={m} value={m}>{m}</option>
                       ))}
                     </select>
@@ -470,6 +489,7 @@ export default function ApplyLeaveForm({ employee, currentUserUsername, approval
               <div className="leaveField leaveFieldTiny">
                 <label>Leave Type</label>
                 <select value={leaveType} onChange={(e) => setLeaveType(e.target.value)}>
+                  <option value="">Select type</option>
                   <option value="EL">EL</option>
                   <option value="SL">SL</option>
                   <option value="LWP">LWP</option>

@@ -12,6 +12,74 @@
   color: #666;
 }
 
+.pendingLeavesFilterBar {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.pendingLeavesFilterField {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pendingLeavesFilterField label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.pendingLeavesFilterField input,
+.pendingLeavesFilterField select {
+  padding: 8px 10px;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  min-width: 140px;
+  background: #fff;
+  outline: none;
+}
+
+.pendingLeavesFilterField input:focus,
+.pendingLeavesFilterField select:focus {
+  border-color: #999;
+}
+
+.pendingLeavesFilterField input::-webkit-outer-spin-button,
+.pendingLeavesFilterField input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.pendingLeavesDownloadButton {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  background-color: #10b981;
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 0.15s ease;
+}
+
+.pendingLeavesDownloadButton:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.pendingLeavesDownloadButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .pendingLeavesTableWrapper {
   overflow-x: auto;
 }
@@ -32,4 +100,22 @@
 .pendingLeavesTable th {
   background-color: #f5f5f5;
   font-weight: 600;
+}
+.pendingLeavesClearButton {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 16px;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  background-color: #fff;
+  color: #333;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.15s ease;
+}
+
+.pendingLeavesClearButton:hover {
+  background-color: #f5f5f5;
 }

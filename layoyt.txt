@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { cookies } from 'next/headers';
 import * as jose from 'jose';
 import LogoutButton from './LogoutButton';
@@ -60,41 +61,41 @@ export default async function DashboardLayout({ children }) {
 
         <div className="dashboardNavRight">
           <div className="dashboardNavLinks">
-
+            
             {showApplyLeaveLink && (
-              <a href="/apply-leave" className="dashboardNavLink">
+              <Link href="/apply-leave" className="dashboardNavLink">
                 <span className="navIcon">📝</span> Apply for a Leave
-              </a>
+              </Link>
             )}
             {showApproveLink && (
-              <a href="/dashboard/leave-approvals" className="dashboardNavLink">
+              <Link href="/dashboard/leave-approvals" className="dashboardNavLink">
                 <span className="navIcon">✅</span> Approve a Leave
-              </a>
+              </Link>
             )}
             {showMonitorHodLink && (
-              <a href="/dashboard/monitor-hod" className="dashboardNavLink">
+              <Link href="/dashboard/monitor-hod" className="dashboardNavLink">
                 <span className="navIcon">📊</span> Monitor HOD&apos;s Attendance
-              </a>
+              </Link>
             )}
             {showMyLeavesLink && (
-              <a href="/dashboard/my-leaves" className="dashboardNavLink">
+              <Link href="/dashboard/my-leaves" className="dashboardNavLink">
                 <span className="navIcon">📋</span> My Leaves
-              </a>
+              </Link>
             )}
             {showMyAttendanceLink && (
-              <a href="/dashboard/my-attendance" className="dashboardNavLink">
+              <Link href="/dashboard/my-attendance" className="dashboardNavLink">
                 <span className="navIcon">🕒</span> My Attendance
-              </a>
+              </Link>
             )}
             {showPendingLeavesLink && (
-              <a href="/dashboard/pending-leaves" className="dashboardNavLink">
+              <Link href="/dashboard/pending-leaves" className="dashboardNavLink">
                 <span className="navIcon">📥</span> Track Pending Leave Status
-              </a>
+              </Link>
             )}
             {showAllLeavesLink && (
-              <a href="/dashboard/all-leaves" className="dashboardNavLink">
+              <Link href="/dashboard/all-leaves" className="dashboardNavLink">
                 <span className="navIcon">📂</span> All Leaves
-              </a>
+              </Link>
             )}
           </div>
           <span className="dashboardNavDivider" />

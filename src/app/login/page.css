@@ -34,9 +34,9 @@
   margin: 0 0 0.3rem;
   font-size: clamp(1.3rem, 2.5vw, 1.9rem);
   font-weight: 800;
-  color: #9160c2;
+  color: #0ea5e9;
   white-space: nowrap;
-  text-shadow: 0 2px 14px rgba(240, 243, 243, 0.55);
+  text-shadow: 0 2px 14px rgb(248, 250, 250);
 }
 
 .pageHeader .systemName {

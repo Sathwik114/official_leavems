@@ -18,8 +18,9 @@ export default function LeaveApprovalsPage() {
   const [expandedId, setExpandedId] = useState(null);
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [activeTab, setActiveTab] = useState('pending');
-  const [monthFilter, setMonthFilter] = useState('all');
-  const [yearFilter, setYearFilter] = useState('all');
+  const currentDate = new Date();
+  const [monthFilter, setMonthFilter] = useState(String(currentDate.getMonth()));
+  const [yearFilter, setYearFilter] = useState(String(currentDate.getFullYear()));
 
   async function loadData() {
     setLoading(true);
@@ -95,13 +96,13 @@ export default function LeaveApprovalsPage() {
   }
 
   function filterByMonthYear(list) {
-    if (monthFilter === 'all' && yearFilter === 'all') return list;
+    if (monthFilter === 'all' && (yearFilter === 'all' || yearFilter === '')) return list;
     return list.filter((r) => {
       const val = getDateValue(r);
       const d = val ? new Date(val) : null;
       if (!d || Number.isNaN(d.getTime())) return false;
       const monthOk = monthFilter === 'all' || d.getMonth() === Number(monthFilter);
-      const yearOk = yearFilter === 'all' || d.getFullYear() === Number(yearFilter);
+      const yearOk = yearFilter === 'all' || yearFilter === '' || d.getFullYear() === Number(yearFilter);
       return monthOk && yearOk;
     });
   }
@@ -116,15 +117,15 @@ export default function LeaveApprovalsPage() {
             <input type="checkbox" checked={selectedIds.has(request.Id)} onChange={() => toggleSelect(request.Id)} />
           </td>
         )}
-        <td>{formatApplicationDate(request)}</td>
         <td>{request.ApplicantId || '-'}</td>
         <td>{request.ApplicantName || '-'}</td>
         <td>{request.Department || '-'}</td>
         <td>{request.Section || '-'}</td>
-        <td>{request.LeaveType}</td>
+        <td>{formatApplicationDate(request)}</td>
         <td>{request.FromTime || '-'}</td>
         <td>{request.ToTime || '-'}</td>
         <td>{request.TotalDays}</td>
+        <td>{request.LeaveType}</td>
         <td>{request.Reason}</td>
         <td>
           {request.TranId && request.AttachmentName ? (
@@ -158,18 +159,6 @@ export default function LeaveApprovalsPage() {
   const activeRequest = expandedId ? uniqueById.find((r) => r.Id === expandedId) : null;
 
   const filteredApproved = filterByMonthYear(approvedRequests);
-
-  const availableYears = Array.from(
-    new Set(
-      combined
-        .map((r) => {
-          const val = getDateValue(r);
-          const d = val ? new Date(val) : null;
-          return d && !Number.isNaN(d.getTime()) ? d.getFullYear() : null;
-        })
-        .filter(Boolean)
-    )
-  ).sort((a, b) => b - a);
 
   async function handleApproveDetail() {
     if (!activeRequest) return;
@@ -235,7 +224,7 @@ export default function LeaveApprovalsPage() {
           className={`leaveTabButton ${activeTab === 'approved' ? 'leaveTabButtonActive' : ''}`}
           onClick={() => setActiveTab('approved')}
         >
-          My Approved Requests
+          Approved Leaves
         </button>
       </div>
 
@@ -251,16 +240,15 @@ export default function LeaveApprovalsPage() {
               <option key={m} value={i}>{m}</option>
             ))}
           </select>
-          <select
+          <input
             className="leaveFilterSelect"
+            type="number"
+            min="1900"
+            step="1"
             value={yearFilter}
             onChange={(e) => setYearFilter(e.target.value)}
-          >
-            <option value="all">All Years</option>
-            {availableYears.map((y) => (
-              <option key={y} value={y}>{y}</option>
-            ))}
-          </select>
+            placeholder="Year"
+          />
         </div>
       )}
 
@@ -290,15 +278,15 @@ export default function LeaveApprovalsPage() {
                               onChange={selectAllToggle}
                             />
                           </th>
-                          <th>Date Applied</th>
                           <th>Applicant ID</th>
                           <th>Applicant Name</th>
                           <th>Department</th>
                           <th>Section</th>
-                          <th>Leave Type</th>
+                          <th>Date Applied</th>
                           <th>From Time</th>
                           <th>To Time</th>
                           <th>Days</th>
+                          <th>Leave Type</th>
                           <th>Reason</th>
                           <th>Attachment</th>
                           <th>Current Approver</th>
@@ -321,7 +309,7 @@ export default function LeaveApprovalsPage() {
 
           {activeTab === 'approved' && (
             <div className="leaveTableCard leaveApprovedCard">
-              <h2>My Approved Requests</h2>
+              <h2>Approved Leaves</h2>
               {filteredApproved.length === 0 ? (
                 <p>No approved requests yet.</p>
               ) : (
@@ -329,15 +317,15 @@ export default function LeaveApprovalsPage() {
                   <table className="leaveNoScrollTable">
                     <thead>
                       <tr>
-                        <th>Date Applied</th>
                         <th>Applicant ID</th>
                         <th>Applicant Name</th>
                         <th>Department</th>
                         <th>Section</th>
-                        <th>Leave Type</th>
+                        <th>Date Applied</th>
                         <th>From Time</th>
                         <th>To Time</th>
                         <th>Days</th>
+                        <th>Leave Type</th>
                         <th>Reason</th>
                         <th>Attachment</th>
                         <th>Current Approver</th>

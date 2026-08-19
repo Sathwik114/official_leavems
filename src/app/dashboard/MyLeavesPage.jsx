@@ -228,8 +228,8 @@ export default function MyLeavesPage() {
                   <th>To Time</th>
                   <th>Reason</th>
                   <th>Status</th>
-                  <th>HOD Status</th>
-                  <th>CCC Status</th>
+                  <th>Vice President Approval</th>
+                  <th>President Approval</th>
                   <th>Attachment</th>
                   <th>Current Approver</th>
                 </tr>
