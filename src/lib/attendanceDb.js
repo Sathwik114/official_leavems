@@ -447,3 +447,39 @@ export async function getLeaveData(empcode, year) {
     return [];
   }
 }
+
+export async function getLegacyLeaveRequestsForApplicant(empcode, cutoffDateStr) {
+  try {
+    const pool = await getPool();
+    const result = await pool.request()
+      .input('Empcode', sql.NVarChar, String(empcode).trim())
+      .input('CutoffDate', sql.DateTime, new Date(cutoffDateStr))
+      .query(`
+        SELECT
+          TranId AS Id,
+          TranId,
+          Empcode AS ApplicantId,
+          EmpName AS ApplicantName,
+          DeptCode AS Department,
+          NSecCode AS Section,
+          LeaveType,
+          FromDate AS StartDate,
+          ToDate AS EndDate,
+          FromTime,
+          ToTime,
+          NoofDays AS TotalDays,
+          Reason,
+          HOSAprveStatus AS HodStatus,
+          HODAprveStatus AS CccStatus,
+          FromDate AS DateApplied,
+          FromDate AS CreatedAt
+        FROM OnlineLeaveEntry
+        WHERE Empcode = @Empcode AND FromDate <= @CutoffDate
+        ORDER BY FromDate DESC
+      `);
+    return result.recordset || [];
+  } catch (err) {
+    console.error(`Error fetching legacy leave requests for ${empcode}:`, err);
+    return [];
+  }
+}

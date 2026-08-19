@@ -1,6 +1,6 @@
 import sql from 'mssql';
 import { getEmployeeDetails as getPayrollEmployeeDetails, deductLeaveBalance} from './payrollDb';
-import { getAttendanceTimesForDate, getMorningLateByForDate } from './attendanceDb';
+import { getAttendanceTimesForDate, getMorningLateByForDate, getLegacyLeaveRequestsForApplicant } from './attendanceDb';
 
 function parseSqlServerConnectionString(connectionString) {
   if (!connectionString) return null;
@@ -984,8 +984,11 @@ export async function getLeaveRequestsForApplicant(applicantId) {
   await ensureLeaveTables();
   const pool = await getPool();
 
+  const cutoffDateStr = '2026-07-31T23:59:59.999Z';
+
   const result = await pool.request()
     .input('ApplicantId', sql.NVarChar, String(applicantId || '').trim())
+    .input('CutoffDate', sql.DateTime, new Date(cutoffDateStr))
     .query(`
       SELECT
         lr.Id,
@@ -1023,12 +1026,25 @@ export async function getLeaveRequestsForApplicant(applicantId) {
         lr.TranId,
         lr.TranDate
       FROM dbo.LeaveRequests lr
-      WHERE lr.ApplicantId = @ApplicantId
+      WHERE lr.ApplicantId = @ApplicantId AND lr.StartDate > @CutoffDate
       ORDER BY lr.CreatedAt DESC;
     `);
 
   const requests = result.recordset || [];
-  return enrichLeaveRequests(requests);
+  const enrichedRequests = await enrichLeaveRequests(requests);
+
+  const legacyRequests = await getLegacyLeaveRequestsForApplicant(applicantId, cutoffDateStr);
+
+  const combined = [...enrichedRequests, ...legacyRequests];
+
+  // Sort by StartDate / CreatedAt descending
+  combined.sort((a, b) => {
+    const dateA = new Date(a.StartDate || a.CreatedAt || a.DateApplied);
+    const dateB = new Date(b.StartDate || b.CreatedAt || b.DateApplied);
+    return dateB - dateA;
+  });
+
+  return combined;
 }
 
 export async function getAllLeaveRequests() {

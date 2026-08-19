@@ -30,7 +30,7 @@ export default function MyLeavesPage() {
   const [loading, setLoading] = useState(true);
   const [dateFilter, setDateFilter] = useState('');
   const [monthFilter, setMonthFilter] = useState('');
-  const [yearFilter, setYearFilter] = useState('');
+  const [yearFilter, setYearFilter] = useState(String(new Date().getFullYear()));
 
   useEffect(() => {
     async function loadData() {
@@ -125,7 +125,6 @@ export default function MyLeavesPage() {
       'From Time': request.FromTime || '-',
       'To Time': request.ToTime || '-',
       'Reason': request.Reason || '-',
-      'Status': request.Status || '-',
       'HOD Status': formatStatus(request.HodStatus),
       'CCC Status': formatStatus(request.CccStatus),
       'Attachment': request.AttachmentName || '-',
@@ -227,7 +226,6 @@ export default function MyLeavesPage() {
                   <th>From Time</th>
                   <th>To Time</th>
                   <th>Reason</th>
-                  <th>Status</th>
                   <th>Vice President Approval</th>
                   <th>President Approval</th>
                   <th>Attachment</th>
@@ -247,7 +245,6 @@ export default function MyLeavesPage() {
                     <td>{request.FromTime || '-'}</td>
                     <td>{request.ToTime || '-'}</td>
                     <td title={request.Reason || ''}>{truncateReason(request.Reason)}</td>
-                    <td>{request.Status}</td>
                     <td>{formatStatus(request.HodStatus)}</td>
                     <td>{formatStatus(request.CccStatus)}</td>
                     <td>
