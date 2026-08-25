@@ -39,18 +39,45 @@ export function getUserEmail(userId) {
   return normalized ? `${normalized}@gti.nws.cn` : '';
 }
 
-function formatDate(value) {
+function formatDate(value, timeString) {
   if (!value) return '-';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return String(value);
-  return date.toLocaleString('en-GB', {
-    year: 'numeric',
-    month: 'short',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  });
+  
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  
+  let formattedHours = '12';
+  let minutes = '00';
+  let ampm = 'AM';
+  
+  if (timeString && typeof timeString === 'string') {
+    const cleanTime = timeString.trim();
+    const match = cleanTime.match(/^(\d{1,2}):(\d{2})(?:\s*(AM|PM|am|pm))?/i);
+    if (match) {
+      formattedHours = String(Number(match[1])).padStart(2, '0');
+      minutes = match[2];
+      if (match[3]) {
+        ampm = match[3].toUpperCase();
+      } else {
+        let h = Number(match[1]);
+        ampm = h >= 12 ? 'PM' : 'AM';
+        h = h % 12;
+        h = h ? h : 12;
+        formattedHours = String(h).padStart(2, '0');
+      }
+    }
+  } else {
+    let hours = date.getHours();
+    minutes = String(date.getMinutes()).padStart(2, '0');
+    ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    formattedHours = String(hours).padStart(2, '0');
+  }
+  
+  return `${day}/${month}/${year} ${formattedHours}:${minutes} ${ampm}`;
 }
 
 function formatSectionRow(label, value) {
@@ -81,7 +108,7 @@ export function buildLeaveRequestEmailContent(request, options = {}) {
 
   const html = `
     <div style="font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; padding: 24px; color: #1e293b;">
-      <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; border: 1px solid #cbd5e1; overflow: hidden; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);">
+      <div style="max-width: 850px; margin: 0 auto; background: #ffffff; border-radius: 12px; border: 1px solid #cbd5e1; overflow: hidden; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);">
         <!-- Header banner -->
         <div style="background: linear-gradient(135deg, #0284c7, #0f172a); padding: 24px; text-align: center; color: #ffffff;">
           <h2 style="margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.025em;">Leave Request Details</h2>
@@ -97,7 +124,8 @@ export function buildLeaveRequestEmailContent(request, options = {}) {
 
         <!-- Table Form (View Form representation) -->
         <div style="padding: 20px 24px;">
-          <table style="width: 100%; border-collapse: collapse; font-size: 13px; border: 1px solid #cbd5e1; border-radius: 8px; overflow: hidden;">
+          <div style="border: 1px solid #cbd5e1; border-radius: 8px; overflow: hidden;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
             <!-- Header row -->
             <tr style="background-color: #f8fafc; border-bottom: 1px solid #cbd5e1;">
               <td colspan="2" style="padding: 10px 12px; font-weight: 600; color: #334155; border-right: 1px solid #cbd5e1;">
@@ -145,9 +173,9 @@ export function buildLeaveRequestEmailContent(request, options = {}) {
             <!-- Row 6: Start Date and End Date -->
             <tr style="border-bottom: 1px solid #cbd5e1;">
               <td style="padding: 10px 12px; font-weight: 600; color: #475569; background-color: #fafbfc; border-right: 1px solid #cbd5e1;">Leave Start Date:</td>
-              <td style="padding: 10px 12px; font-weight: 700; color: #0f172a; border-right: 1px solid #cbd5e1;">${formatDate(request.startDate)}</td>
+              <td style="padding: 10px 12px; font-weight: 700; color: #0f172a; border-right: 1px solid #cbd5e1;">${formatDate(request.startDate, request.fromTime || request.FromTime)}</td>
               <td style="padding: 10px 12px; font-weight: 600; color: #475569; background-color: #fafbfc; border-right: 1px solid #cbd5e1;">End Date:</td>
-              <td style="padding: 10px 12px; font-weight: 700; color: #0f172a;">${formatDate(request.endDate)}</td>
+              <td style="padding: 10px 12px; font-weight: 700; color: #0f172a;">${formatDate(request.endDate, request.toTime || request.ToTime)}</td>
             </tr>
             <!-- Row 7: Contact and Reliever -->
             <tr style="border-bottom: 1px solid #cbd5e1;">
@@ -172,19 +200,12 @@ export function buildLeaveRequestEmailContent(request, options = {}) {
                 ` : (request.AttachmentName || '-')}
               </td>
             </tr>
-            <!-- Row 10: HoD Approval -->
+            <!-- Row 10: HoD Status and CCC Status -->
             <tr style="border-bottom: 1px solid #cbd5e1;">
-              <td style="padding: 10px 12px; font-weight: 600; color: #475569; background-color: #fafbfc; border-right: 1px solid #cbd5e1;">HoD Approval:</td>
-              <td style="padding: 10px 12px; font-weight: 700; color: #0f172a; border-right: 1px solid #cbd5e1;">${request.HodApproval || '-'}</td>
-              <td style="padding: 10px 12px; font-weight: 600; color: #475569; background-color: #fafbfc; border-right: 1px solid #cbd5e1;">HoD Status:</td>
-              <td style="padding: 10px 12px; font-weight: 700; color: #0f172a;">${request.HodStatus || 'PENDING'}</td>
-            </tr>
-            <!-- Row 11: CCC Approval -->
-            <tr style="border-bottom: 1px solid #cbd5e1;">
-              <td style="padding: 10px 12px; font-weight: 600; color: #475569; background-color: #fafbfc; border-right: 1px solid #cbd5e1;">CCC Approval:</td>
-              <td style="padding: 10px 12px; font-weight: 700; color: #0f172a; border-right: 1px solid #cbd5e1;">${request.CccApproval || '-'}</td>
-              <td style="padding: 10px 12px; font-weight: 600; color: #475569; background-color: #fafbfc; border-right: 1px solid #cbd5e1;">CCC Status:</td>
-              <td style="padding: 10px 12px; font-weight: 700; color: #0f172a;">${request.CccStatus || 'PENDING'}</td>
+              <td style="padding: 10px 12px; font-weight: 600; color: #475569; background-color: #fafbfc; border-right: 1px solid #cbd5e1; width: 25%;">Vice President Status:</td>
+              <td style="padding: 10px 12px; font-weight: 700; color: #0f172a; border-right: 1px solid #cbd5e1; width: 25%;">${request.HodStatus || 'PENDING'}</td>
+              <td style="padding: 10px 12px; font-weight: 600; color: #475569; background-color: #fafbfc; border-right: 1px solid #cbd5e1; width: 25%;">President Status:</td>
+              <td style="padding: 10px 12px; font-weight: 700; color: #0f172a; width: 25%;">${request.CccStatus || 'PENDING'}</td>
             </tr>
             <!-- Row 12: Approval Flow -->
             ${remarks ? `
@@ -192,7 +213,8 @@ export function buildLeaveRequestEmailContent(request, options = {}) {
               <td style="padding: 10px 12px; font-weight: 600; color: #b45309; border-right: 1px solid #cbd5e1;">Remarks:</td>
               <td colspan="3" style="padding: 10px 12px; font-weight: 700; color: #78350f;">${remarks}</td>
             </tr>` : ''}
-          </table>
+           </table>
+          </div>
         </div>
 
         <!-- Actions block -->
@@ -239,17 +261,15 @@ export function buildLeaveRequestEmailContent(request, options = {}) {
     `Shift: ${request.shift || request.Shift || '-'}`,
     `Employee Type: ${request.empType || request.EmpType || '-'}`,
     `Leave Type: ${request.leaveType || '-'}`,
-    `Start Date: ${formatDate(request.startDate)}`,
-    `End Date: ${formatDate(request.endDate)}`,
+    `Start Date: ${formatDate(request.startDate, request.fromTime || request.FromTime)}`,
+    `End Date: ${formatDate(request.endDate, request.toTime || request.ToTime)}`,
     `Total Days: ${request.totalDays || '-'}`,
     `Reason: ${request.reason || '-'}`,
     `Attachment: ${request.AttachmentName || '-'}`,
     `Reliever ID: ${request.relieverId || '-'}`,
     `Reliever Name: ${request.relieverName || '-'}`,
     `Contact Number: ${request.contactNumber || '-'}`,
-    `HoD Approval: ${request.HodApproval || '-'}`,
     `HoD Status: ${request.HodStatus || 'PENDING'}`,
-    `CCC Approval: ${request.CccApproval || '-'}`,
     `CCC Status: ${request.CccStatus || 'PENDING'}`,
     `Direct Approve Link: ${directApproveLink || '-'}`,
     `Direct Reject Link: ${directRejectLink || '-'}`,
