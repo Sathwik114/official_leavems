@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getLeaveData } from "@/lib/attendanceDb";
+import { getLeaveRequestsForApplicant } from "@/lib/leaveDb";
 import { getEmployeeDetails } from "@/lib/payrollDb";
 
 export async function GET(request) {
@@ -12,10 +12,19 @@ export async function GET(request) {
   }
 
   try {
-    const [employee, leave] = await Promise.all([
+    const [employee, rawLeave] = await Promise.all([
       getEmployeeDetails(empcode),
-      getLeaveData(empcode, year ? parseInt(year) : null),
+      getLeaveRequestsForApplicant(empcode),
     ]);
+
+    let leave = rawLeave;
+    if (year) {
+      const y = parseInt(year, 10);
+      leave = rawLeave.filter((req) => {
+        const d = new Date(req.StartDate || req.FromDate || req.CreatedAt || req.DateApplied);
+        return d.getFullYear() === y;
+      });
+    }
 
     return NextResponse.json({ employee, leave });
   } catch (err) {

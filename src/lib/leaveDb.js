@@ -2,6 +2,8 @@ import sql from 'mssql';
 import { getEmployeeDetails as getPayrollEmployeeDetails, deductLeaveBalance} from './payrollDb';
 import { getAttendanceTimesForDate, getMorningLateByForDate, getLegacyLeaveRequestsForApplicant } from './attendanceDb';
 
+export const CUTOFF_DATE_STR = '2026-07-31T23:59:59.999Z';
+
 function parseSqlServerConnectionString(connectionString) {
   if (!connectionString) return null;
 
@@ -984,11 +986,9 @@ export async function getLeaveRequestsForApplicant(applicantId) {
   await ensureLeaveTables();
   const pool = await getPool();
 
-  const cutoffDateStr = '2026-07-31T23:59:59.999Z';
-
   const result = await pool.request()
     .input('ApplicantId', sql.NVarChar, String(applicantId || '').trim())
-    .input('CutoffDate', sql.DateTime, new Date(cutoffDateStr))
+    .input('CutoffDate', sql.DateTime, new Date(CUTOFF_DATE_STR))
     .query(`
       SELECT
         lr.Id,
@@ -1033,7 +1033,7 @@ export async function getLeaveRequestsForApplicant(applicantId) {
   const requests = result.recordset || [];
   const enrichedRequests = await enrichLeaveRequests(requests);
 
-  const legacyRequests = await getLegacyLeaveRequestsForApplicant(applicantId, cutoffDateStr);
+  const legacyRequests = await getLegacyLeaveRequestsForApplicant(applicantId, CUTOFF_DATE_STR);
 
   const combined = [...enrichedRequests, ...legacyRequests];
 
@@ -1044,7 +1044,12 @@ export async function getLeaveRequestsForApplicant(applicantId) {
     return dateB - dateA;
   });
 
-  return combined;
+  return combined.map(req => ({
+    ...req,
+    FromDate: req.FromDate || req.StartDate,
+    ToDate: req.ToDate || req.EndDate,
+    NoofDays: req.NoofDays !== undefined ? req.NoofDays : req.TotalDays
+  }));
 }
 
 export async function getAllLeaveRequests() {
