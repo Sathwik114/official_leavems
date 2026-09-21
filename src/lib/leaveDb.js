@@ -1,5 +1,5 @@
 import sql from 'mssql';
-import { getEmployeeDetails as getPayrollEmployeeDetails, deductLeaveBalance} from './payrollDb';
+import { getEmployeeDetails as getPayrollEmployeeDetails } from './payrollDb';
 import { getAttendanceTimesForDate, getMorningLateByForDate, getLegacyLeaveRequestsForApplicant } from './attendanceDb';
 
 export const CUTOFF_DATE_STR = '2026-07-31T23:59:59.999Z';
@@ -628,8 +628,7 @@ export async function createLeaveRequest(payload) {
       );
     `);
 
-  // Balance is NOT deducted here — it's deducted only when the request is
-  // fully approved (see updateLeaveRequestStatus).
+  // EL and SL balances are informational and are not changed by leave requests.
   return result.recordset[0] || null;
 }
 
@@ -784,20 +783,12 @@ export async function updateLeaveRequestStatus(leaveRequestId, currentApprover, 
     `);
 
   const row = result.recordset[0];
-  const justBecameApproved = row && row.PreviousStatus !== 'APPROVED' && status === 'APPROVED';
   const cccWasAccepted = Boolean(row && String(row.UpdatedCccStatus || '').trim().toLowerCase() === 'accept');
 
   if (cccWasAccepted) {
     await syncAcceptedLeaveRequestToArchive(leaveRequestId);
   }
 
-  if (justBecameApproved) {
-    const updatedBalance = await deductLeaveBalance(row.ApplicantId, row.LeaveType, row.TotalDays).catch((err) => {
-      console.error('Failed to deduct leave balance for', row.ApplicantId, row.LeaveType, ':', err.message);
-      return null;
-    });
-    console.log('[updateLeaveRequestStatus] Balance deducted on final approval:', { applicantId: row.ApplicantId, leaveType: row.LeaveType, totalDays: row.TotalDays, updatedBalance });
-  }
 }
 
 export async function updateLeaveRequestRejection(leaveRequestId, rejectedBy, reason, stepNumber = 0) {

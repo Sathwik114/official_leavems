@@ -513,6 +513,7 @@ export default function ApplyLeaveForm({ employee, currentUserUsername, approval
                   className="leaveInputFull"
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
+                  placeholder={leaveType === 'COFF' ? 'Please enter the date of your working day to apply the COFF' : ''}
                 />
               </div>
             </div>
