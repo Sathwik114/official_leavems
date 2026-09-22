@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 
 async function fetchEmployeeProfile(empcode) {
   try {
-    const res = await fetch(`/api/employee?empcode=${encodeURIComponent(empcode)}`);
+    const res = await fetch(`/api/employee?empcode=${encodeURIComponent(empcode)}&monitor=true`);
     const data = await res.json();
     return res.ok ? data.employee : null;
   } catch (error) {
@@ -47,7 +47,7 @@ export default function MonitorHodPage({ hodList = [] }) {
 
     setLoading(true);
     try {
-      const res = await fetch(`/api/employee?empcode=${empcode}&month=${month}&year=${year}`);
+      const res = await fetch(`/api/employee?empcode=${empcode}&month=${month}&year=${year}&monitor=true`);
       const data = await res.json();
       if (res.ok && data.attendance) {
         setAttendance(sortAttendanceDesc(data.attendance));

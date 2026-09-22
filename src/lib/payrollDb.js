@@ -44,6 +44,31 @@ export async function getEmployeeDetails(empcode) {
   return result.recordset[0] || null;
 }
 
+export async function getEmployeeDetailsForMonitor(empcode) {
+  const pool = await getPool();
+
+  const result = await pool
+    .request()
+    .input("empcode", sql.NVarChar, String(empcode).trim())
+    .query(`
+      SELECT TOP 1
+          EmpCode,
+          EmpName,
+          D.DEPTNAME AS DeptCode,
+          N.NSECTION AS Section,
+          Shift,
+          EmpType,
+          EL AS EarnLeaveBalance,
+          CL AS SickLeaveBalance
+      FROM EmpMast E
+      LEFT JOIN DEPTMAST D ON E.DEPTCODE = D.DEPTCODE
+      LEFT JOIN NSECMast N ON E.NSECCODE = N.NSECCODE
+      WHERE LTRIM(RTRIM(E.EmpCode)) = @empcode
+    `);
+
+  return result.recordset[0] || null;
+}
+
 // Maps a submitted leave type (including half-day variants like 'EL/P', 'P/EL')
 // to the EmpMast column that tracks its balance. LWP/COFF/OD/etc. return null
 // since they don't draw against a balance column.

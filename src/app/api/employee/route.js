@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getEmployeeDetails } from "@/lib/payrollDb";
+import { getEmployeeDetails, getEmployeeDetailsForMonitor } from "@/lib/payrollDb";
 import { getAttendanceData, getPreviousMonthEndRows } from "@/lib/attendanceDb";
 
 export async function GET(request) {
@@ -13,7 +13,9 @@ export async function GET(request) {
   }
 
   try {
-    const employee = await getEmployeeDetails(empcode);
+    const employee = searchParams.get('monitor') === 'true'
+      ? await getEmployeeDetailsForMonitor(empcode)
+      : await getEmployeeDetails(empcode);
     
     let attendance = [];
     const includePreviousTopRows = searchParams.get('includePreviousTopRows') === 'true';
