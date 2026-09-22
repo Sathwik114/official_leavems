@@ -69,3 +69,17 @@ model LeaveApproval {
   stepNumber     Int
   createdAt      DateTime     @default(now())
 }
+
+model LeaveRoleMember {
+  id             Int      @id @default(autoincrement()) @map("Id")
+  roleCode       String   @map("RoleCode")
+  membershipType String   @map("MembershipType")
+  userId         String   @map("UserId")
+  sortOrder      Int      @default(0) @map("SortOrder")
+  isActive       Boolean  @default(true) @map("IsActive")
+  createdAt      DateTime @default(now()) @map("CreatedAt")
+  updatedAt      DateTime @updatedAt @map("UpdatedAt")
+
+  @@unique([roleCode, membershipType, userId], map: "UQ_LeaveRoleMembers")
+  @@map("LeaveRoleMembers")
+}

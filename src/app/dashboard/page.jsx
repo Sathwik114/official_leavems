@@ -47,7 +47,7 @@ export default async function Dashboard() {
   }
 
   // HR users don't use this dashboard — send them straight to Pending Leaves
-  if (isHrUser(user.username)) {
+  if (await isHrUser(user.username)) {
     redirect('/dashboard/pending-leaves');
   }
 
@@ -98,7 +98,7 @@ export default async function Dashboard() {
             empcode={String(user.username)}
             employee={currentEmployee}
             attendance={attendanceWithEmployeeNames}
-            canApplyLeave={!isCccUser(user.username)}
+            canApplyLeave={!(await isCccUser(user.username))}
           />
         )}
       </div>

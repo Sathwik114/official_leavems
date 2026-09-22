@@ -19,11 +19,11 @@ export default async function MonitorHodRoutePage() {
     }
   }
 
-  if (!canAccessMonitorHod(currentUserId)) {
+  if (!(await canAccessMonitorHod(currentUserId))) {
     redirect('/dashboard');
   }
 
-  const hodList = getMonitorHodListEntries(currentUserId);
+  const hodList = await getMonitorHodListEntries(currentUserId);
 
   return <MonitorHodPage hodList={hodList} />;
 }

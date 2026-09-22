@@ -2,7 +2,7 @@ import sql from 'mssql';
 import { getEmployeeDetails as getPayrollEmployeeDetails } from './payrollDb';
 import { getAttendanceTimesForDate, getMorningLateByForDate, getLegacyLeaveRequestsForApplicant } from './attendanceDb';
 
-export const CUTOFF_DATE_STR = '2026-07-31T23:59:59.999Z';
+export const CUTOFF_DATE_STR = '2026-08-31T23:59:59.999Z';
 
 function parseSqlServerConnectionString(connectionString) {
   if (!connectionString) return null;

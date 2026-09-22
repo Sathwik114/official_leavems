@@ -22,8 +22,8 @@ export default async function MyAttendanceRoutePage() {
     }
   }
 
-  if (!canAccessMyAttendance(currentUserId)) {
-    redirect(getDashboardRedirectForUser(currentUserId));
+  if (!(await canAccessMyAttendance(currentUserId))) {
+    redirect(await getDashboardRedirectForUser(currentUserId));
   }
 
   return <MyAttendancePage empcode={currentUserId} />;

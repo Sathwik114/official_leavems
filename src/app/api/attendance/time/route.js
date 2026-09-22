@@ -27,7 +27,7 @@ export async function POST(request) {
     }
 
     // A user can only edit their own attendance, unless they're CCC.
-    if (String(empcode) !== String(currentUsername) && !isCccUser(currentUsername)) {
+    if (String(empcode) !== String(currentUsername) && !(await isCccUser(currentUsername))) {
       return NextResponse.json({ error: 'You are not allowed to update this record' }, { status: 403 });
     }
 

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import * as jose from 'jose';
 import ldap from 'ldapjs';
+import { getDashboardRedirectForUser } from '@/lib/leaveApprovalConfig';
 
 
 
@@ -145,8 +146,16 @@ export async function POST(request) {
     const requestUrl = new URL(request.url);
     const secureCookie = requestUrl.protocol === 'https:' && process.env.NODE_ENV === 'production';
 
+    // Authentication must not fail just because the role database is unavailable.
+    // The dashboard will apply database-backed permissions after the session starts.
+    let redirectPath = '/dashboard';
+    try {
+      redirectPath = await getDashboardRedirectForUser(username);
+    } catch (roleError) {
+      console.error('Leave role lookup failed during login:', roleError);
+    }
     const response = NextResponse.json(
-      { message: 'Logged in successfully', username },
+      { message: 'Logged in successfully', username, redirectPath },
       { status: 200 }
     );
 

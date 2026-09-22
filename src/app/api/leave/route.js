@@ -90,7 +90,7 @@ export async function POST(request) {
       );
     }
 
-    const approvalFlow = getLeaveApprovalFlow(applicantId, currentUserUsername);
+    const approvalFlow = await getLeaveApprovalFlow(applicantId, currentUserUsername);
     if (!approvalFlow) {
       return NextResponse.json(
         { error: 'No approval flow configured for this applicant.' },

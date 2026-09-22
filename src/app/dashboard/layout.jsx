@@ -2,7 +2,7 @@ import { cookies } from 'next/headers';
 import * as jose from 'jose';
 import LogoutButton from './LogoutButton';
 import {
-  LEAVE_ROLE_RULES,
+  getLeaveRoleRules,
   isCccUser,
   isApproverUser,
   isApplicantUser,
@@ -29,20 +29,20 @@ export default async function DashboardLayout({ children }) {
     }
   }
 
-  const mfApplicantIds = LEAVE_ROLE_RULES.mf.ids || [];
-  const admApplicantIds = LEAVE_ROLE_RULES.adm.ids || [];
-  const vipApplicantIds = LEAVE_ROLE_RULES.vip.ids || [];
-  const isCCC = isCccUser(currentUserId);
+  const rules = await getLeaveRoleRules();
+  const mfApplicantIds = rules.mf.ids;
+  const admApplicantIds = rules.adm.ids;
+  const vipApplicantIds = rules.vip.ids;
+  const isCCC = await isCccUser(currentUserId);
   const isMfApplicant = mfApplicantIds.includes(currentUserId);
   const isAdmApplicant = admApplicantIds.includes(currentUserId);
   const isVipApplicant = vipApplicantIds.includes(currentUserId);
-  const isApprover = isApproverUser(currentUserId);
-  const isRoleUser = isApplicantUser(currentUserId) || isApprover;
+  const isApprover = await isApproverUser(currentUserId);
 
-  const isHr = isHrUser(currentUserId);
-  const isMfPrimaryApproverUser = isMfPrimaryApprover(currentUserId);
-  const showMonitorHodLink = canAccessMonitorHod(currentUserId);
-  const showMyAttendanceLink = canAccessMyAttendance(currentUserId);
+  const isHr = await isHrUser(currentUserId);
+  const isMfPrimaryApproverUser = await isMfPrimaryApprover(currentUserId);
+  const showMonitorHodLink = await canAccessMonitorHod(currentUserId);
+  const showMyAttendanceLink = await canAccessMyAttendance(currentUserId);
   const showDashboardLink = !isCCC && !isHr;
   const showApplyLeaveLink = !isCCC && !isHr && !isMfPrimaryApproverUser;
   const showApproveLink = isCCC || (isApprover || isVipApplicant) && !isHr;

@@ -4,7 +4,6 @@
 import './page.css';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getDashboardRedirectForUser } from '@/lib/leaveApprovalConfig';
 
 export default function Login() {
   const router = useRouter();
@@ -52,8 +51,7 @@ export default function Login() {
       setSuccess('Logged in successfully! Redirecting...');
       setFormData({ username: '', password: '' });
 
-      const userId = username.trim();
-      const redirectPath = getDashboardRedirectForUser(userId);
+      const redirectPath = data.redirectPath || '/dashboard';
 
       setTimeout(() => {
         router.push(redirectPath);
@@ -71,7 +69,7 @@ export default function Login() {
         <div className="pageHeader">
           <center>
           <h3 className="brandName">GREENTECH INDUSTRIES</h3>
-          <p className="systemName">HOD's Leave Management System</p>
+          <p className="systemName">HOD&apos;s Leave Management System</p>
           </center>
         </div>
 

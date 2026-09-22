@@ -38,7 +38,7 @@ export default async function ApplyLeavePage({ searchParams }) {
   if (applicantId) {
     try {
       employee = await getEmployeeDetails(applicantId);
-      approvalFlow = getLeaveApprovalFlow(employee?.EmpCode || applicantId);
+      approvalFlow = await getLeaveApprovalFlow(employee?.EmpCode || applicantId);
     } catch (err) {
       console.error('Employee fetch error:', err);
     }

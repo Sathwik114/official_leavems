@@ -25,7 +25,7 @@ export default async function PendingLeavesPage({ searchParams }) {
   }
 
   // HR only
-  if (!isHrUser(currentUserId)) {
+  if (!(await isHrUser(currentUserId))) {
     redirect('/dashboard');
   }
 

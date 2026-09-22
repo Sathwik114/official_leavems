@@ -58,7 +58,7 @@ export default async function AllLeavesPage({ searchParams }) {
     }
   }
 
-  if (!isHrUser(currentUserId)) {
+  if (!(await isHrUser(currentUserId))) {
     redirect('/dashboard');
   }
 

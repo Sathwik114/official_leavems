@@ -104,7 +104,7 @@ export async function POST(request, { params }) {
           directRejectLink: getDirectRejectLink(leaveRequestId, nextApprover),
         });
       } else {
-        if (!isCccUser(approvedBy)) {
+        if (!(await isCccUser(approvedBy))) {
           recipientEmail = getUserEmail(leaveRequest.ApplicantId);
           emailSubject = `Leave Request Approved: ${emailRequest.applicantName}`;
           emailContent = buildLeaveRequestEmailContent(emailRequest, {
