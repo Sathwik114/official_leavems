@@ -120,11 +120,16 @@
 }
 
 .allLeavesTableWrapper {
-  overflow-x: auto;
+  width: 100%;
+  max-width: 100%;
+  max-height: 520px;
+  overflow: auto;
+  border: 1px solid #e0e0e0;
 }
 
 .allLeavesTable {
   width: 100%;
+  min-width: 1400px;
   border-collapse: collapse;
 }
 
@@ -139,6 +144,9 @@
 .allLeavesTable th {
   background-color: #f5f5f5;
   font-weight: 700;
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
 
 .viewFormLink {

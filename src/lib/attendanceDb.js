@@ -448,6 +448,49 @@ export async function getLeaveData(empcode, year) {
   }
 }
 
+export async function getAllLeaveData(applicantIds = []) {
+  try {
+    const normalizedIds = Array.from(new Set(
+      applicantIds.map((id) => String(id || '').trim()).filter(Boolean)
+    ));
+    if (!normalizedIds.length) return [];
+
+    const pool = await getPool();
+    const request = pool.request();
+    const parameters = normalizedIds.map((id, index) => {
+      const parameterName = `ApplicantId${index}`;
+      request.input(parameterName, sql.NVarChar, id);
+      return `@${parameterName}`;
+    });
+
+    const result = await request.query(`
+      SELECT
+        TranId,
+        Empcode AS ApplicantId,
+        EmpName AS ApplicantName,
+        DeptCode AS Department,
+        NSecCode AS Section,
+        LeaveType,
+        FromDate AS StartDate,
+        ToDate AS EndDate,
+        FromTime,
+        ToTime,
+        NoofDays AS TotalDays,
+        HOSAprveStatus AS HodStatus,
+        HODAprveStatus AS CccStatus,
+        Reason
+      FROM OnlineLeaveEntry
+      WHERE LTRIM(RTRIM(Empcode)) IN (${parameters.join(', ')})
+      ORDER BY FromDate DESC
+    `);
+
+    return result.recordset || [];
+  } catch (err) {
+    console.error('Error fetching all leave data:', err);
+    return [];
+  }
+}
+
 export async function getLegacyLeaveRequestsForApplicant(empcode, cutoffDateStr) {
   try {
     const pool = await getPool();

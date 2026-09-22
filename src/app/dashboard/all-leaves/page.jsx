@@ -1,8 +1,8 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import * as jose from 'jose';
-import { prisma } from '@/lib/prisma';
-import { isHrUser } from '@/lib/leaveApprovalConfig';
+import { getLeaveApprovalApplicantIds, isHrUser } from '@/lib/leaveApprovalConfig';
+import { getAllLeaveData } from '@/lib/attendanceDb';
 import { getAllLeaveRequestsArchive } from '@/lib/leaveDb';
 import AllLeavesFilters from './AllLeavesFilters';
 import LeaveTypeColumnFilter from './LeaveTypeColumnFilter';
@@ -64,7 +64,23 @@ export default async function AllLeavesPage({ searchParams }) {
 
   let leaves = [];
   try {
-    leaves = await getAllLeaveRequestsArchive();
+    const applicantIds = await getLeaveApprovalApplicantIds();
+    const [onlineLeaves, archivedSpecialLeaves] = await Promise.all([
+      getAllLeaveData(applicantIds),
+      getAllLeaveRequestsArchive(applicantIds),
+    ]);
+    const seen = new Set();
+    leaves = [...onlineLeaves, ...archivedSpecialLeaves].filter((leave) => {
+      const key = [
+        leave.ApplicantId,
+        leave.LeaveType,
+        leave.StartDate,
+        leave.EndDate,
+      ].map((value) => String(value || '').trim()).join('|');
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
   } catch (error) {
     console.error('Failed to load all leave requests:', error);
     leaves = [];

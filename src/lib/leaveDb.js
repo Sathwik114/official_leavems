@@ -1093,12 +1093,24 @@ export async function getAllLeaveRequests() {
   return enrichLeaveRequests(requests);
 }
 
-export async function getAllLeaveRequestsArchive() {
+export async function getAllLeaveRequestsArchive(applicantIds = []) {
   await ensureLeaveTables();
   const pool = await getPool();
+  const normalizedIds = Array.from(new Set(
+    applicantIds.map((id) => String(id || '').trim()).filter(Boolean)
+  ));
+  if (!normalizedIds.length) return [];
 
-  const result = await pool.request().query(`
+  const request = pool.request();
+  const parameters = normalizedIds.map((id, index) => {
+    const parameterName = `ApplicantId${index}`;
+    request.input(parameterName, sql.NVarChar, id);
+    return `@${parameterName}`;
+  });
+
+  const result = await request.query(`
     SELECT
+      TranId,
       ApplicantId,
       ApplicantName,
       Department,
@@ -1112,6 +1124,8 @@ export async function getAllLeaveRequestsArchive() {
       CccStatus,
       Reason
     FROM dbo.AllLeaveRequests
+    WHERE LTRIM(RTRIM(ApplicantId)) IN (${parameters.join(', ')})
+      AND UPPER(LTRIM(RTRIM(LeaveType))) IN ('COFF', 'P/7H')
     ORDER BY StartDate DESC;
   `);
 

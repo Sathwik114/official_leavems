@@ -168,6 +168,18 @@ export async function getAllApplicantIds() {
   return [...rules.mf.ids, ...rules.adm.ids, ...rules.vip.ids, ...rules.hr.ids];
 }
 
+export async function getLeaveApprovalApplicantIds() {
+  const result = await (await getPool()).request().query(`
+    SELECT EmpCode
+    FROM dbo.LeaveApprovalFlow
+    WHERE LOWER(LTRIM(RTRIM(EmpCategory))) IN ('mf', 'adm', 'vip')
+  `);
+
+  return Array.from(new Set(
+    (result.recordset || []).map((row) => normalizeId(row.EmpCode)).filter(Boolean)
+  ));
+}
+
 export async function getAllApproverIds() {
   const rules = await getLeaveRoleRules();
   return [...rules.mf.approverIds, ...rules.adm.approverIds, ...rules.vip.approverIds];
@@ -195,7 +207,7 @@ export async function getLeaveApprovalFlow(applicantId) {
   if (!['mf', 'adm', 'vip'].includes(role)) return null;
 
   const specialCccUserId = await getCccUserId();
-  const flow = [row.VicePresident, specialCccUserId || row.President]
+  const flow = [row.VicePresident, row.President || specialCccUserId]
     .map(normalizeId)
     .filter(Boolean);
   if (!flow.length) return null;
