@@ -403,6 +403,46 @@ export async function ensureLeaveTables() {
         TranDate DATETIME NULL
       );
     END;
+
+    -- Keep the legacy AttmSystem trigger compatible with first-level rejections.
+    -- CccApproval is normally NULL when the HOD rejects a request, but the
+    -- legacy HODApprover column does not allow NULL values.
+    IF OBJECT_ID(N'dbo.trg_AllLeaveRequests_Insert_OnlineLeaveEntry_AttmSystem', N'TR') IS NOT NULL
+    BEGIN
+      EXEC(N'
+        ALTER TRIGGER dbo.trg_AllLeaveRequests_Insert_OnlineLeaveEntry_AttmSystem
+        ON dbo.AllLeaveRequests
+        AFTER INSERT
+        AS
+        BEGIN
+          SET NOCOUNT ON;
+
+          INSERT INTO AttmSystem.dbo.OnlineLeaveEntry
+          (
+            TranId, TranDate, UnitCode, Empcode, EmpName, DeptCode, NSecCode,
+            LeaveType, FromDate, ToDate, FromTime, ToTime, NoofDays, Reason,
+            RelieverEmpcode, ContactNo, EmpLevel, CLApprover, CLAprveStatus,
+            TLApprover, TLAprveStatus, HOSApprover, HOSAprveStatus, HODApprover,
+            HODAprveStatus, FinalApproveLevel, HRApprover, HRAprveStatus,
+            HRLeaveType, LoginId, LoginDate, EntryPerson, MailStatus, HOSReject,
+            HODReject, LeaveCategory
+          )
+          SELECT
+            I.TranId, I.TranDate, ''GTI'', I.ApplicantId, I.ApplicantName,
+            I.Department, I.Section, I.LeaveType, I.StartDate, I.EndDate,
+            I.FromTime, I.ToTime, I.TotalDays, I.Reason, I.RelieverId,
+            I.ContactNumber, ''5'', ''NA'', ''NA'', ''NA'', ''NA'',
+            COALESCE(I.HodApproval, ''''), COALESCE(I.HodStatus, ''PENDING''),
+            COALESCE(I.CccApproval, I.HodApproval, ''''),
+            COALESCE(I.CccStatus, I.HodStatus, ''PENDING''),
+            ''N'', '''', '''', I.LeaveType, '''', I.TranDate, I.ApplicantId,
+            '''', '''', '''', I.LeaveType
+          FROM inserted AS I
+          WHERE I.LeaveType IN
+          (''EL'', ''SL'', ''LWP'', ''EL/P'', ''P/EL'', ''LWP/P'', ''P/LWP'', ''OD'');
+        END;
+      ');
+    END;
   `);
 }
 
@@ -413,11 +453,51 @@ async function syncAcceptedLeaveRequestToArchive(leaveRequestId) {
   await pool.request()
     .input('LeaveRequestId', sql.Int, leaveRequestId)
     .query(`
-      IF NOT EXISTS (
-        SELECT 1
-        FROM dbo.AllLeaveRequests
-        WHERE LeaveRequestId = @LeaveRequestId
-      )
+      UPDATE archive
+      SET
+        ApplicantId = source.ApplicantId,
+        ApplicantName = source.ApplicantName,
+        Department = source.Department,
+        Section = source.Section,
+        Shift = source.Shift,
+        EmpType = source.EmpType,
+        LeaveType = source.LeaveType,
+        StartDate = source.StartDate,
+        EndDate = source.EndDate,
+        FromTime = source.FromTime,
+        ToTime = source.ToTime,
+        CAPINTIME = source.CAPINTIME,
+        CAPOUTTIME = source.CAPOUTTIME,
+        MorningLateBy = source.MorningLateBy,
+        TotalDays = source.TotalDays,
+        Reason = source.Reason,
+        RelieverId = source.RelieverId,
+        RelieverName = source.RelieverName,
+        ContactNumber = source.ContactNumber,
+        AttachmentName = source.AttachmentName,
+        AttachmentType = source.AttachmentType,
+        ApprovalFlow = source.ApprovalFlow,
+        CurrentApprover = source.CurrentApprover,
+        ApprovedBy = source.ApprovedBy,
+        ApprovedAt = source.ApprovedAt,
+        HodApproval = source.HodApproval,
+        HodStatus = source.HodStatus,
+        CccApproval = source.CccApproval,
+        CccStatus = source.CccStatus,
+        CccRejectId = source.CccRejectId,
+        CccRejectReason = source.CccRejectReason,
+        HrApproval = source.HrApproval,
+        HrStatus = source.HrStatus,
+        Status = source.Status,
+        CreatedAt = source.CreatedAt,
+        UpdatedAt = source.UpdatedAt,
+        TranId = source.TranId,
+        TranDate = source.TranDate
+      FROM dbo.AllLeaveRequests archive
+      INNER JOIN dbo.LeaveRequests source ON source.Id = archive.LeaveRequestId
+      WHERE source.Id = @LeaveRequestId;
+
+      IF @@ROWCOUNT = 0
       BEGIN
         INSERT INTO dbo.AllLeaveRequests (
           LeaveRequestId,
@@ -502,7 +582,11 @@ async function syncAcceptedLeaveRequestToArchive(leaveRequestId) {
           TranDate
         FROM dbo.LeaveRequests
         WHERE Id = @LeaveRequestId
-          AND LOWER(COALESCE(CccStatus, '')) = 'accept';
+          AND (
+            LOWER(COALESCE(CccStatus, '')) = 'accept'
+            OR LOWER(COALESCE(HodStatus, '')) = 'rejected'
+            OR LOWER(COALESCE(CccStatus, '')) = 'rejected'
+          );
       END;
     `);
 }
@@ -817,6 +901,8 @@ export async function updateLeaveRequestRejection(leaveRequestId, rejectedBy, re
           UpdatedAt = GETDATE()
       WHERE Id = @LeaveRequestId;
     `);
+
+  await syncAcceptedLeaveRequestToArchive(leaveRequestId);
 }
 
 export async function getLeaveRequestById(leaveRequestId) {

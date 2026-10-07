@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 
-function sortAttendanceDesc(records) {
-  return [...records].sort((a, b) => new Date(b.AttDate) - new Date(a.AttDate));
+function sortAttendanceAsc(records) {
+  return [...records].sort((a, b) => new Date(a.AttDate) - new Date(b.AttDate));
 }
 
 const monthNames = [
@@ -48,7 +48,7 @@ export default function MyAttendancePage({ empcode }) {
         );
         const data = await res.json();
         if (res.ok && data.attendance) {
-          setAttendance(sortAttendanceDesc(data.attendance));
+          setAttendance(sortAttendanceAsc(data.attendance));
           setEmployee(data.employee || null);
         } else {
           setAttendance([]);
@@ -409,6 +409,197 @@ export default function MyAttendancePage({ empcode }) {
     }
   }
 
+  async function handleDownloadExcel() {
+    if (!attendance.length) return;
+
+    setExporting(true);
+    try {
+      const ExcelJSModule = await import('exceljs');
+      const ExcelJS = ExcelJSModule.default || ExcelJSModule;
+      const sortedForExcel = [...attendance].sort(
+        (a, b) => new Date(a.AttDate) - new Date(b.AttDate)
+      );
+      const idLabel = employee?.Empcode || empcode || '';
+      const nameLabel = employee?.EmpName || '';
+      const deptLabel = employee?.DeptCode || '';
+      const monthLabel = `${monthNames[month - 1]} ${year}`;
+      const downloadDateLabel = formatRegisterDate(new Date());
+      const footerText = 'Greentech Industries HR@  01/10/2026 By Jagadeesh';
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('Attendance', {
+        pageSetup: {
+          orientation: 'portrait',
+          paperSize: 9,
+          fitToPage: true,
+          fitToWidth: 1,
+          fitToHeight: 1,
+          horizontalDpi: 300,
+          verticalDpi: 300,
+        },
+        views: [{ showGridLines: false }],
+      });
+
+      worksheet.columns = [
+        { width: 2 },
+        { width: 6.5 }, { width: 6.5 },
+        { width: 6 }, { width: 6 },
+        { width: 6 }, { width: 6 },
+        { width: 8 }, { width: 8 },
+        { width: 18 }, { width: 18 },
+      ];
+
+      const blackBorder = { style: 'thin', color: { argb: 'FF000000' } };
+      const lightBorder = { style: 'thin', color: { argb: 'FF808080' } };
+      const dottedBorder = { style: 'dotted', color: { argb: 'FFB7B7B7' } };
+      const tableBorder = { top: blackBorder, bottom: blackBorder, left: blackBorder, right: blackBorder };
+      const bodyBorder = { top: dottedBorder, bottom: dottedBorder, left: dottedBorder, right: dottedBorder };
+      const center = { horizontal: 'center', vertical: 'middle' };
+      const whiteFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } };
+      const labelFont = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FF000000' } };
+      const normalFont = { name: 'Calibri', size: 11, color: { argb: 'FF000000' } };
+      const pageInfoFont = { ...normalFont, size: 9 };
+
+      worksheet.mergeCells('B1:J1');
+      worksheet.getCell('B1').value = 'Daily Attendance Register';
+      worksheet.getCell('B1').font = { name: 'Calibri', size: 18, bold: true, color: { argb: 'FF000000' } };
+      worksheet.getCell('B1').alignment = { horizontal: 'left', vertical: 'bottom' };
+      worksheet.getCell('K1').value = `Page 1 of 1\nDate : ${downloadDateLabel}\nPrepared By:${'\u00A0'.repeat(20)}`;
+      worksheet.getCell('K1').font = pageInfoFont;
+      worksheet.getCell('K1').alignment = { horizontal: 'right', vertical: 'bottom', wrapText: true };
+      worksheet.mergeCells('E3:F3');
+      worksheet.mergeCells('J3:K3');
+      worksheet.getCell('E3').value = 'Approved:';
+      worksheet.getCell('E3').font = labelFont;
+      worksheet.getCell('E3').alignment = center;
+      worksheet.getCell('J3').value = 'Checked:';
+      worksheet.getCell('J3').font = labelFont;
+      worksheet.getCell('J3').alignment ={ horizontal: 'left', vertical: 'middle' };
+
+      worksheet.getRow(1).height = 42;
+      worksheet.getRow(2).height = 8;
+      worksheet.getRow(3).height = 26;
+      worksheet.getRow(4).getCell(2).value = `Employee ID :    ${idLabel}`;
+      worksheet.getRow(4).getCell(8).value = `Employee Name :    ${nameLabel}`;
+      worksheet.mergeCells('B4:G4');
+      worksheet.mergeCells('H4:K4');
+      worksheet.getRow(5).getCell(2).value = `Department :    ${deptLabel}`;
+      worksheet.getRow(5).getCell(8).value = `Month :${monthLabel}`;
+      worksheet.mergeCells('B5:G5');
+      worksheet.mergeCells('H5:K5');
+      [4, 5].forEach((rowNumber) => {
+        const row = worksheet.getRow(rowNumber);
+        row.height = 22;
+        for (let column = 2; column <= 11; column += 1) {
+          const cell = row.getCell(column);
+          cell.fill = whiteFill;
+          cell.border = {
+            top: blackBorder,
+            bottom: blackBorder,
+            ...(column === 2 || column === 8 ? { left: blackBorder } : {}),
+            ...(column === 7 || column === 11 ? { right: blackBorder } : {}),
+          };
+          cell.font = normalFont;
+          cell.alignment = { vertical: 'middle', horizontal: column === 2 || column === 8 ? 'left' : 'center' };
+        }
+      });
+      ['B4', 'H4'].forEach((address) => {
+        worksheet.getCell(address).font = labelFont;
+        worksheet.getCell(address).alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
+      });
+      ['B5', 'H5'].forEach((address) => {
+        worksheet.getCell(address).font = labelFont;
+        worksheet.getCell(address).alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
+      });
+
+      // Keep the employee details and column headings in one continuous table.
+      const headerRow = worksheet.getRow(6);
+      headerRow.height = 20;
+      [['B6:C6', 'Date'], ['D6:E6', 'In Time'], ['F6:G6', 'Out Time'], ['H6:I6', 'Attendance Type'], ['J6:K6', 'Remarks']].forEach(([range, value]) => {
+        worksheet.mergeCells(range);
+        const cell = worksheet.getCell(range.split(':')[0]);
+        cell.value = value;
+        cell.font = labelFont;
+        cell.alignment = center;
+        cell.fill = whiteFill;
+        cell.border = {
+          bottom: lightBorder,
+          left: blackBorder,
+          right: blackBorder,
+        };
+      });
+
+      sortedForExcel.forEach((record, index) => {
+        const row = worksheet.getRow(7 + index);
+        worksheet.mergeCells(`B${row.number}:C${row.number}`);
+        worksheet.mergeCells(`D${row.number}:E${row.number}`);
+        worksheet.mergeCells(`F${row.number}:G${row.number}`);
+        worksheet.mergeCells(`H${row.number}:I${row.number}`);
+        worksheet.mergeCells(`J${row.number}:K${row.number}`);
+        row.getCell(2).value = formatRegisterDate(record.AttDate);
+        row.getCell(4).value = record.InTime || '';
+        row.getCell(6).value = record.OutTime || '';
+        row.getCell(8).value = record.AttType || '';
+        row.getCell(10).value = record.Remarks || '';
+        row.height = 21;
+        row.eachCell((cell, column) => {
+          cell.font = { name: 'Calibri', size: 11, color: { argb: 'FF000000' }, bold: column === 2 || column === 8 };
+          cell.alignment = { ...center, wrapText: column === 10 };
+          cell.fill = whiteFill;
+          cell.border = bodyBorder;
+        });
+      });
+
+      const lastAttendanceRow = 7 + sortedForExcel.length - 1;
+
+      // Solid outer frame around the details, headings, and attendance rows.
+      for (let rowNumber = 4; rowNumber <= lastAttendanceRow; rowNumber += 1) {
+        worksheet.getCell(`B${rowNumber}`).border = {
+          ...worksheet.getCell(`B${rowNumber}`).border,
+          left: blackBorder,
+        };
+        worksheet.getCell(`K${rowNumber}`).border = {
+          ...worksheet.getCell(`K${rowNumber}`).border,
+          right: blackBorder,
+        };
+      }
+      for (let column = 2; column <= 11; column += 1) {
+        worksheet.getCell(4, column).border = {
+          ...worksheet.getCell(4, column).border,
+          top: blackBorder,
+        };
+        worksheet.getCell(lastAttendanceRow, column).border = {
+          ...worksheet.getCell(lastAttendanceRow, column).border,
+          bottom: blackBorder,
+        };
+      }
+
+      worksheet.pageSetup.fitToPage = true;
+      worksheet.pageSetup.fitToWidth = 1;
+      worksheet.pageSetup.fitToHeight = 1;
+      worksheet.pageSetup.horizontalCentered = true;
+      worksheet.pageSetup.margins = { left: 0.2, right: 0.2, top: 0.25, bottom: 0.35, header: 0, footer: 0.25 };
+      worksheet.headerFooter.oddFooter = `&C${footerText}`;
+      worksheet.printArea = `B1:K${lastAttendanceRow}`;
+
+      const empLabel = (employee?.EmpName || empcode || 'employee')
+        .toString()
+        .replace(/[^a-z0-9]+/gi, '_');
+      const fileName = `Attendance_${empLabel}_${monthNames[month - 1]}_${year}.xlsx`;
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const downloadUrl = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = downloadUrl;
+      anchor.download = fileName;
+      anchor.click();
+      URL.revokeObjectURL(downloadUrl);
+    } catch (err) {
+      console.error('Failed to export attendance to Excel:', err);
+    } finally {
+      setExporting(false);
+    }
+  }
+
   return (
     <div className="dashboardPage">
       <div className="dashboardBlob dashboardBlobOne" />
@@ -445,14 +636,16 @@ export default function MyAttendancePage({ empcode }) {
             />
           </div>
 
-          <button
-            type="button"
-            className="downloadExcelButton"
-            onClick={handleDownloadPdf}
-            disabled={exporting || loading || attendance.length === 0}
-          >
-            {exporting ? 'Exporting…' : '📄 Download PDF'}
-          </button>
+          <div className="attendanceExportActions">
+            <button
+              type="button"
+              className="downloadExcelButton"
+              onClick={handleDownloadExcel}
+              disabled={exporting || loading || attendance.length === 0}
+            >
+              {exporting ? 'Exporting...' : '📊 Download Excel'}
+            </button>
+          </div>
         </div>
 
         <div className="hodSelectedInfo">
@@ -489,11 +682,10 @@ export default function MyAttendancePage({ empcode }) {
                 </thead>
                 <tbody>
                   {attendance.map((record, idx) => {
-                    const date = new Date(record.AttDate);
                     const rowKey = `${record.Empcode || empcode}-${record.AttDate ? new Date(record.AttDate).toISOString() : idx}`;
                     return (
                       <tr key={rowKey}>
-                        <td>{date.toLocaleDateString()}</td>
+                        <td>{formatRegisterDate(record.AttDate) || '-'}</td>
                         <td>{record.InTime || '-'}</td>
                         <td>{record.OutTime || '-'}</td>
                         <td>{record.AttType || '-'}</td>

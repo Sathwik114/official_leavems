@@ -371,7 +371,6 @@
 .attendanceDetailTable td:nth-child(5) { width: 30%; } /* Remarks */
 
 .downloadExcelButton {
-  margin-left: auto;
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
@@ -386,6 +385,13 @@
   white-space: nowrap;
   box-shadow: 0 6px 14px -6px rgba(16, 185, 129, 0.4);
   transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+}
+
+.attendanceExportActions {
+  display: inline-flex;
+  gap: 0.6rem;
+  margin-left: auto;
+  flex-wrap: wrap;
 }
 
 .downloadExcelButton:hover:not(:disabled) {

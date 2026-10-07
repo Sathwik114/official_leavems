@@ -7,7 +7,7 @@ const SMTP_USER = process.env.SMTP_USER;
 const SMTP_PASS = process.env.SMTP_PASS;
 const SMTP_AUTH_METHOD = process.env.SMTP_AUTH_METHOD?.trim();
 const MAIL_FROM = process.env.MAIL_FROM || SMTP_USER;
-const APP_URL = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://10.40.20.4:3000';
+const APP_URL = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://10.40.10.125:7000';
 
 if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS || !MAIL_FROM) {
   console.warn('SMTP configuration is incomplete. Email sending may fail.');
