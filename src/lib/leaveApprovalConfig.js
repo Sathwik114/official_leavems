@@ -76,6 +76,22 @@ export async function getLeaveRoleRules() {
   return rules;
 }
 
+export async function isLeaveRoleMember(userId) {
+  const id = normalizeId(userId);
+  if (!id) return false;
+
+  await ensureLeaveRoleMembersTable();
+  const result = await (await getPool()).request()
+    .input('userId', id)
+    .query(`
+      SELECT TOP 1 1 AS IsMember
+      FROM dbo.LeaveRoleMembers
+      WHERE IsActive = 1 AND UserId = @userId;
+    `);
+
+  return Boolean(result.recordset?.length);
+}
+
 export async function getCccUserId() {
   return normalizeId((await getLeaveRoleRules()).special.ccc);
 }

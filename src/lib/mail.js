@@ -8,6 +8,7 @@ const SMTP_PASS = process.env.SMTP_PASS;
 const SMTP_AUTH_METHOD = process.env.SMTP_AUTH_METHOD?.trim();
 const MAIL_FROM = process.env.MAIL_FROM || SMTP_USER;
 const APP_URL = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://10.40.10.125:7000';
+const APPROVAL_APP_URL = 'http://10.40.20.4:3000';
 
 if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS || !MAIL_FROM) {
   console.warn('SMTP configuration is incomplete. Email sending may fail.');
@@ -37,6 +38,22 @@ function normalizeUserId(userId) {
 export function getUserEmail(userId) {
   const normalized = normalizeUserId(userId);
   return normalized ? `${normalized}@gti.nws.cn` : '';
+}
+
+export function getApprovalStatusesForEmail(leaveRequest, stepNumber, decision) {
+  const statuses = {
+    HodStatus: leaveRequest.HodStatus || 'PENDING',
+    CccStatus: leaveRequest.CccStatus || 'PENDING',
+  };
+  const normalizedDecision = String(decision || '').toUpperCase();
+
+  if (stepNumber === 1 && ['APPROVED', 'REJECTED'].includes(normalizedDecision)) {
+    statuses.HodStatus = normalizedDecision === 'APPROVED' ? 'Accept' : 'REJECTED';
+  } else if (stepNumber === 2 && ['APPROVED', 'REJECTED'].includes(normalizedDecision)) {
+    statuses.CccStatus = normalizedDecision === 'APPROVED' ? 'Accept' : 'REJECTED';
+  }
+
+  return statuses;
 }
 
 function formatDate(value, timeString) {
@@ -285,7 +302,7 @@ export function getApprovalLink(leaveId, approverId) {
   const id = String(leaveId || '').trim();
   if (!id) return '';
 
-  const url = new URL(`${APP_URL}/dashboard/leave-approvals`);
+  const url = new URL(`${APPROVAL_APP_URL}/dashboard/leave-approvals`);
   url.searchParams.set('requestId', id);
   if (approverId) {
     url.searchParams.set('approver', normalizeUserId(approverId));
@@ -297,7 +314,7 @@ export function getDirectApproveLink(leaveId, approverId) {
   const id = String(leaveId || '').trim();
   if (!id) return '';
 
-  const url = new URL(`${APP_URL}/api/leave/approve-direct`);
+  const url = new URL(`${APPROVAL_APP_URL}/api/leave/approve-direct`);
   url.searchParams.set('id', id);
   if (approverId) {
     url.searchParams.set('approver', normalizeUserId(approverId));
@@ -309,7 +326,7 @@ export function getDirectRejectLink(leaveId, approverId) {
   const id = String(leaveId || '').trim();
   if (!id) return '';
 
-  const url = new URL(`${APP_URL}/api/leave/approve-direct`);
+  const url = new URL(`${APPROVAL_APP_URL}/api/leave/approve-direct`);
   url.searchParams.set('id', id);
   url.searchParams.set('action', 'reject');
   if (approverId) {

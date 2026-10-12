@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import * as jose from 'jose';
 import ldap from 'ldapjs';
-import { getDashboardRedirectForUser } from '@/lib/leaveApprovalConfig';
+import { getDashboardRedirectForUser, isLeaveRoleMember } from '@/lib/leaveApprovalConfig';
 
 
 
@@ -132,11 +132,22 @@ export async function POST(request) {
       return NextResponse.json({ error: e.message }, { status: 401 });
     }
 
+    const normalizedUsername = username.trim();
+    const userId = normalizedUsername.includes('\\')
+      ? normalizedUsername.split('\\').pop().split('@')[0]
+      : normalizedUsername.split('@')[0];
+    if (!(await isLeaveRoleMember(userId))) {
+      return NextResponse.json(
+        { error: 'You do not have access to log in to this site. Please contact the IT Team.' },
+        { status: 403 }
+      );
+    }
+
     const secret = new TextEncoder().encode(process.env.JWT_SECRET);
     const token = await new jose.SignJWT({
       id: userDN,
-      username,
-      name: username,
+      username: userId,
+      name: userId,
     })
       .setProtectedHeader({ alg: 'HS256' })
       .setIssuedAt()
@@ -150,12 +161,12 @@ export async function POST(request) {
     // The dashboard will apply database-backed permissions after the session starts.
     let redirectPath = '/dashboard';
     try {
-      redirectPath = await getDashboardRedirectForUser(username);
+      redirectPath = await getDashboardRedirectForUser(userId);
     } catch (roleError) {
       console.error('Leave role lookup failed during login:', roleError);
     }
     const response = NextResponse.json(
-      { message: 'Logged in successfully', username, redirectPath },
+      { message: 'Logged in successfully', username: userId, redirectPath },
       { status: 200 }
     );
 

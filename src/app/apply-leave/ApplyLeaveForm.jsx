@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import './page.css';
 
@@ -25,6 +25,62 @@ function addOneHour(hour, min, period) {
   };
 }
 
+function formatDateForInput(date) {
+  if (!date) return '';
+  const [year, month, day] = date.split('-');
+  return `${day}/${month}/${year}`;
+}
+
+function DatePicker({ date, onChange, label, disabled = false }) {
+  const pickerRef = useRef(null);
+
+  function openPicker() {
+    const picker = pickerRef.current;
+    if (!picker) return;
+
+    if (typeof picker.showPicker === 'function') {
+      picker.showPicker();
+    } else {
+      picker.click();
+    }
+  }
+
+  return (
+    <div className="leaveDatePicker">
+      <input
+        type="text"
+        value={formatDateForInput(date)}
+        readOnly
+        className="leaveDateDisplay"
+        placeholder="DD/MM/YYYY"
+        aria-label={label}
+      />
+      <button
+        type="button"
+        className="leaveDatePickerButton"
+        onClick={openPicker}
+        disabled={disabled}
+        aria-label={`Choose ${label.toLowerCase()}`}
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <rect x="3" y="5" width="18" height="16" rx="2" />
+          <path d="M16 3v4M8 3v4M3 10h18" />
+        </svg>
+      </button>
+      <input
+        ref={pickerRef}
+        type="date"
+        value={date}
+        onChange={(event) => onChange(event.target.value)}
+        disabled={disabled}
+        className="leaveDatePickerNative"
+        tabIndex={-1}
+        aria-hidden="true"
+      />
+    </div>
+  );
+}
+
 function getHalfDayLeaveType(leaveType, startTime, endTime, startDate, endDate) {
   if (!startDate || startDate !== endDate) return '';
 
@@ -41,18 +97,29 @@ function getHalfDayLeaveType(leaveType, startTime, endTime, startDate, endDate) 
     return diff === 60 ? 'P/7H' : '';
   }
 
-  const halfDayLeaveTypes = {
-    EL: {
-      '08:30 AM-01:30 PM': 'EL/P',
-      '01:30 PM-06:00 PM': 'P/EL',
-    },
-    LWP: {
-      '08:30 AM-01:30 PM': 'LWP/P',
-      '01:30 PM-06:00 PM': 'P/LWP',
-    },
-  };
+  const [startHour, startMinPart] = startTime.split(':');
+  const [startMin, startPeriod] = startMinPart.split(' ');
+  const [endHour, endMinPart] = endTime.split(':');
+  const [endMin, endPeriod] = endMinPart.split(' ');
+  const startTotal = to24HourMinutes(startHour, startMin, startPeriod);
+  const endTotal = to24HourMinutes(endHour, endMin, endPeriod);
 
-  return halfDayLeaveTypes[leaveType]?.[`${startTime}-${endTime}`] || '';
+  if (endTotal <= startTotal) return '';
+
+  const morningHalfDay = startTotal >= 8 * 60 + 30 && endTotal <= 13 * 60 + 30;
+  const afternoonHalfDay = startTotal >= 13 * 60 + 30 && endTotal <= 18 * 60;
+
+  if (leaveType === 'EL') {
+    if (morningHalfDay) return 'EL/P';
+    if (afternoonHalfDay) return 'P/EL';
+  }
+
+  if (leaveType === 'LWP') {
+    if (morningHalfDay) return 'LWP/P';
+    if (afternoonHalfDay) return 'P/LWP';
+  }
+
+  return '';
 }
 
 function formatApprovalFlowEntry(approverId, fallbackName = '') {
@@ -257,8 +324,8 @@ export default function ApplyLeaveForm({ employee, currentUserUsername, approval
       return;
     }
 
-    if (!contactNumber.trim()) {
-      setSubmitError('Please enter a contact number while on leave.');
+    if (!/^\d{10}$/.test(contactNumber)) {
+      setSubmitError('Please enter a contact number containing exactly 10 digits.');
       return;
     }
 
@@ -412,9 +479,13 @@ export default function ApplyLeaveForm({ employee, currentUserUsername, approval
 
             <div className="leaveDateBlock">
               <div className="leaveDateHalf">
-                <label className="leaveDateHeading">Start Date</label>
+                <label className="leaveDateHeading">Start Date <span className="requiredMark" aria-hidden="true">*</span></label>
                 <div className="leaveDateHalfInner">
-                  <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+                  <DatePicker
+                    date={startDate}
+                    onChange={setStartDate}
+                    label="Start date"
+                  />
                   <div className="leaveTimeInline">
                     <select value={startHour} onChange={(e) => setStartHour(e.target.value)}>
                       {Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0')).map((h) => (
@@ -437,14 +508,13 @@ export default function ApplyLeaveForm({ employee, currentUserUsername, approval
               <div className="leaveDateDivider" />
 
               <div className="leaveDateHalf">
-                <label className="leaveDateHeading">End Date</label>
+                <label className="leaveDateHeading">End Date <span className="requiredMark" aria-hidden="true">*</span></label>
                 <div className="leaveDateHalfInner">
-                  <input
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    readOnly={leaveType === '1Hour'}
-                    className={leaveType === '1Hour' ? 'leaveReadOnly' : ''}
+                  <DatePicker
+                    date={endDate}
+                    onChange={setEndDate}
+                    label="End date"
+                    disabled={leaveType === '1Hour'}
                   />
                   <div className="leaveTimeInline">
                     <select
@@ -480,14 +550,7 @@ export default function ApplyLeaveForm({ employee, currentUserUsername, approval
               <div className="leaveDateDivider" />
 
               <div className="leaveDateHalf leaveDateHalfTotal">
-                <label className="leaveDateHeading">Total Days</label>
-                <input type="text" value={totalDays} readOnly className="leaveReadOnly" />
-              </div>
-            </div>
-
-            <div className="leaveFormRow leaveTypeReasonRow">
-              <div className="leaveField leaveFieldTiny">
-                <label>Leave Type</label>
+                <label className="leaveDateHeading">Leave Type <span className="requiredMark" aria-hidden="true">*</span></label>
                 <select value={leaveType} onChange={(e) => setLeaveType(e.target.value)}>
                   <option value="">Select type</option>
                   <option value="EL">EL</option>
@@ -498,16 +561,18 @@ export default function ApplyLeaveForm({ employee, currentUserUsername, approval
                   <option value="1Hour">1 Hour</option>
                 </select>
               </div>
+            </div>
 
-              {halfDayLeaveType && (
+            <div className="leaveFormRow leaveTypeReasonRow">
+              {leaveType !== '1Hour' && (
                 <div className="leaveField leaveFieldTiny">
-                  <label>Leave Type Flow</label>
-                  <input type="text" value={halfDayLeaveType} readOnly className="leaveReadOnly" />
+                  <label>Total Days</label>
+                  <input type="text" value={totalDays} readOnly className="leaveReadOnly" />
                 </div>
               )}
 
               <div className="leaveField leaveFieldGrow">
-                <label>Reason</label>
+                <label>Reason <span className="requiredMark" aria-hidden="true">*</span></label>
                 <input
                   type="text"
                   className="leaveInputFull"
@@ -532,11 +597,12 @@ export default function ApplyLeaveForm({ employee, currentUserUsername, approval
             {requiresAttachment && (
               <div className="leaveFormRow leaveAttachmentRow">
                 <div className="leaveField">
-                  <label>Upload Supporting Document</label>
+                  <label>Upload Supporting Document <span className="requiredMark" aria-hidden="true">*</span></label>
                   <input
                     type="file"
                     accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.bmp,.tif,.tiff,.svg"
                     onChange={(e) => setAttachment(e.target.files?.[0] || null)}
+                    required={requiresAttachment}
                   />
                 </div>
                 <p className="leaveAttachmentNote">
@@ -555,7 +621,7 @@ export default function ApplyLeaveForm({ employee, currentUserUsername, approval
 
               <div className="leaveFormRow leaveThreeCol">
                 <div className="leaveField">
-                  <label style={{ display: 'block', minHeight: '18px' }}>Reliever ID</label>
+                  <label style={{ display: 'block', minHeight: '18px' }}>Reliever ID <span className="requiredMark" aria-hidden="true">*</span></label>
                   <input
                     type="text"
                     value={relieverId}
@@ -568,10 +634,9 @@ export default function ApplyLeaveForm({ employee, currentUserUsername, approval
                   <input
                     type="text"
                     value={relieverName}
-                    onChange={(e) => setRelieverName(e.target.value)}
                     placeholder={relieverLookupStatus === 'loading' ? 'Looking up...' : ''}
-                    className={relieverLookupStatus === 'loading' ? 'leaveReadOnly' : ''}
-                    readOnly={relieverLookupStatus === 'loading'}
+                    className={`relieverNameReadOnly${relieverLookupStatus === 'loading' ? ' leaveReadOnly' : ''}`}
+                    readOnly
                   />
                   {relieverLookupStatus === 'error' && (
                     <span className="leaveFieldError">Employee ID not found</span>
@@ -585,11 +650,15 @@ export default function ApplyLeaveForm({ employee, currentUserUsername, approval
 
               <div className="leaveFormRow">
                 <div className="leaveField" style={{ width: '100%' }}>
-                  <label style={{ display: 'block', minHeight: '18px' }}>Contact Number</label>
+                  <label style={{ display: 'block', minHeight: '18px' }}>Contact Number <span className="requiredMark" aria-hidden="true">*</span></label>
                   <input
                     type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]{10}"
+                    maxLength={10}
+                    title="Enter exactly 10 digits."
                     value={contactNumber}
-                    onChange={(e) => setContactNumber(e.target.value)}
+                    onChange={(e) => setContactNumber(e.target.value.replace(/\D/g, '').slice(0, 10))}
                     required
                   />
                 </div>

@@ -8,6 +8,11 @@
     "start": "next start",
     "lint": "eslint"
   },
+  "browserslist": [
+    "chrome >= 111",
+    "edge >= 111",
+    "firefox >= 111"
+  ],
   "dependencies": {
     "@prisma/adapter-mssql": "^7.8.0",
     "@prisma/client": "^6.16.2",
@@ -35,8 +40,9 @@
   "allowScripts": {
     "sharp@0.34.5": true,
     "unrs-resolver@1.12.2": true,
-    "@prisma/client@6.16.2": true,
-    "@prisma/engines@6.16.2": true,
-    "prisma@6.16.2": true
+    "@prisma/client@6.19.3": true,
+    "@prisma/engines@6.19.3": true,
+    "core-js@3.49.0": true,
+    "prisma@6.19.3": true
   }
 }

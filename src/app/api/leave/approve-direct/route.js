@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getLeaveRequestById, addLeaveApproval, updateLeaveRequestStatus, updateLeaveRequestRejection } from '@/lib/leaveDb';
 import { getEmployeeDetails } from '@/lib/payrollDb';
-import { getUserEmail, sendMail, buildLeaveRequestEmailContent, getApprovalLink, getDirectApproveLink, getDirectRejectLink } from '@/lib/mail';
+import { getUserEmail, sendMail, buildLeaveRequestEmailContent, getApprovalStatusesForEmail, getApprovalLink, getDirectApproveLink, getDirectRejectLink } from '@/lib/mail';
 import { isCccUser } from '@/lib/leaveApprovalConfig';
 
 export async function GET(request) {
@@ -130,6 +130,7 @@ export async function GET(request) {
       HodStatus: leaveRequest.HodStatus || 'PENDING',
       CccApproval: leaveRequest.CccApproval || '',
       CccStatus: leaveRequest.CccStatus || 'PENDING',
+      ...getApprovalStatusesForEmail(leaveRequest, currentStep + 1, decisionValue),
     };
 
     let emailSubject = '';
@@ -252,6 +253,7 @@ export async function POST(request) {
       HodStatus: leaveRequest.HodStatus || 'PENDING',
       CccApproval: leaveRequest.CccApproval || '',
       CccStatus: leaveRequest.CccStatus || 'PENDING',
+      ...getApprovalStatusesForEmail(leaveRequest, currentStep + 1, 'REJECTED'),
     };
 
     try {

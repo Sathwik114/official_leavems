@@ -72,6 +72,13 @@ export async function POST(request) {
       );
     }
 
+    if (!/^\d{10}$/.test(String(contactNumber || '').trim())) {
+      return NextResponse.json(
+        { error: 'Contact number must contain exactly 10 digits.' },
+        { status: 400 }
+      );
+    }
+
     const isDuplicate = await hasDuplicateLeaveRequest(applicantId, startDate);
     if (isDuplicate) {
       return NextResponse.json(

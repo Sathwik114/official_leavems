@@ -1,5 +1,15 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
 
+## Browser support
+
+The application targets Chrome and Edge 111+, Firefox 111+, Safari and iOS
+Safari 16.4+, Android Chrome and Firefox 111+, Samsung Internet 21+, and Opera
+Mobile 97+.
+
+Internet Explorer is not supported by Next.js 16 / React 19. Supporting IE
+would require replacing the current framework stack; adding polyfills alone is
+not sufficient.
+
 ## Getting Started
 
 First, run the development server:
