@@ -119,6 +119,11 @@ function getHalfDayLeaveType(leaveType, startTime, endTime, startDate, endDate) 
     if (afternoonHalfDay) return 'P/LWP';
   }
 
+  if (leaveType === 'COFF') {
+    if (morningHalfDay) return 'COFF/P';
+    if (afternoonHalfDay) return 'P/COFF';
+  }
+
   return '';
 }
 

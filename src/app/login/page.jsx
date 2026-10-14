@@ -3,10 +3,8 @@
 
 import './page.css';
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 
 export default function Login() {
-  const router = useRouter();
   const [formData, setFormData] = useState({ username: '', password: '' });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -54,7 +52,7 @@ export default function Login() {
       const redirectPath = data.redirectPath || '/dashboard';
 
       setTimeout(() => {
-        router.push(redirectPath);
+        window.location.assign(redirectPath);
       }, 1000);
     } catch (err) {
       console.error(err);

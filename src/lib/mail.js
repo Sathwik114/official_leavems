@@ -8,7 +8,7 @@ const SMTP_PASS = process.env.SMTP_PASS;
 const SMTP_AUTH_METHOD = process.env.SMTP_AUTH_METHOD?.trim();
 const MAIL_FROM = process.env.MAIL_FROM || SMTP_USER;
 const APP_URL = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://10.40.10.125:7000';
-const APPROVAL_APP_URL = 'http://10.40.20.4:3000';
+const APPROVAL_APP_URL = APP_URL;
 
 if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS || !MAIL_FROM) {
   console.warn('SMTP configuration is incomplete. Email sending may fail.');
@@ -239,9 +239,9 @@ export function buildLeaveRequestEmailContent(request, options = {}) {
           <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin: 20px auto 8px auto;">
             <tr>
               ${directApproveLink ? `
-              <td style="padding: 0 6px;">
-                <a href="${directApproveLink}" style="display: inline-block; padding: 12px 18px; background: linear-gradient(135deg, #0284c7, #0369a1); color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 13px; white-space: nowrap; box-shadow: 0 4px 6px -1px rgba(2, 132, 199, 0.2);">
-                  Click Here to Approve
+              <td bgcolor="#ffffff" style="padding: 0 6px; background-color: #ffffff;">
+                <a href="${directApproveLink}" style="display: inline-block; padding: 11px 18px; background: #ffffff !important; background-color: #ffffff !important; color: #16a34a !important; border: 1px solid #16a34a; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 13px; white-space: nowrap;">
+                  <span style="color: #16a34a !important;">Click Here to Approve</span>
                 </a>
               </td>
               ` : ''}

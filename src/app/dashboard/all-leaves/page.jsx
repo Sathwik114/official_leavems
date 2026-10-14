@@ -35,7 +35,7 @@ function matchesLeaveType(leaveType, filter) {
     case 'OD':
       return lt === 'OD';
     case 'COFF':
-      return lt === 'COFF';
+      return lt === 'COFF' || lt === 'COFF/P' || lt === 'P/COFF';
     case 'P/7H':
       return lt === 'P/7H';
     default:

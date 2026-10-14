@@ -439,7 +439,7 @@ export async function ensureLeaveTables() {
             '''', '''', '''', I.LeaveType
           FROM inserted AS I
           WHERE I.LeaveType IN
-          (''EL'', ''SL'', ''LWP'', ''EL/P'', ''P/EL'', ''LWP/P'', ''P/LWP'', ''OD'');
+          (''EL'', ''SL'', ''LWP'', ''EL/P'', ''P/EL'', ''LWP/P'', ''P/LWP'', ''COFF'', ''COFF/P'', ''P/COFF'', ''OD'');
         END;
       ');
     END;
@@ -597,7 +597,7 @@ export async function createLeaveRequest(payload) {
   const payrollEmployee = await getPayrollEmployeeDetails(payload.applicantId).catch(() => null);
 
   // Only pull CAP In/Out time from AttmSystem when the leave type is COFF
-  const attendanceTimes = payload.leaveType === 'COFF'
+  const attendanceTimes = String(payload.leaveType || '').toUpperCase().includes('COFF')
     ? await getAttendanceTimesForDate(payload.applicantId, payload.startDate).catch(() => ({ CapInTime: null, CapOutTime: null }))
     : { CapInTime: null, CapOutTime: null };
 
@@ -722,7 +722,7 @@ export async function createLeaveRequestWithInitialApproval(payload, approverId)
   const payrollEmployee = await getPayrollEmployeeDetails(payload.applicantId).catch(() => null);
 
   // Only pull CAP In/Out time from AttmSystem when the leave type is COFF
-  const attendanceTimes = payload.leaveType === 'COFF'
+  const attendanceTimes = String(payload.leaveType || '').toUpperCase().includes('COFF')
     ? await getAttendanceTimesForDate(payload.applicantId, payload.startDate).catch(() => ({ CapInTime: null, CapOutTime: null }))
     : { CapInTime: null, CapOutTime: null };
 
@@ -1249,5 +1249,4 @@ export async function hasDuplicateLeaveRequest(applicantId, startDate) {
 
   return (result.recordset[0]?.count || 0) > 0;
 }
-
 

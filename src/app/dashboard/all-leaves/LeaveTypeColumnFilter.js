@@ -7,7 +7,7 @@ const LEAVE_TYPES = [
   { value: 'EL', label: 'EL (P/EL, EL/P)' },
   { value: 'SL', label: 'SL' },
   { value: 'OD', label: 'OD' },
-  { value: 'COFF', label: 'COFF' },
+  { value: 'COFF', label: 'COFF (P/COFF, COFF/P)' },
   { value: 'LWP', label: 'LWP (P/LWP, LWP/P)' },
   { value: 'P/7H', label: 'P/7H' },
 ];
